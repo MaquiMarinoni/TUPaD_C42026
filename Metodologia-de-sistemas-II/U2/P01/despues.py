@@ -36,7 +36,7 @@ class CSVReport(Report):
     def render(self): self.output = f"--- CSV ---\nHeader: {self.header}\nData: {self.data}\nFooter: {self.footer}"
     def get_output(self) -> str: return self.output
 
-# Nuevo producto agregado SIN tocar el ReportService
+# Nuevo producto agregado sin tocar el ReportService
 class HTMLReport(Report):
     def set_data(self, data): self.data = data
     def add_header(self, text): self.header = text
@@ -48,11 +48,7 @@ class HTMLReport(Report):
 class ReportFactory:
     
     # Justificación Factory vs Abstract Factory:
-    # Se utiliza Factory Method (variante Static Factory) porque solo
-    # necesitamos crear variantes de un ÚNICO tipo de objeto (Report).
-    # Abstract Factory sería necesario si debiéramos crear familias de 
-    # objetos relacionados (ej: Reportes + Dashboards + Exportadores) 
-    # que deban ser compatibles entre sí.
+# Se utiliza Factory Method (variante Static Factory) porque solo necesitamos crear variantes de un unico tipo de objeto (Report). Abstract Factory sería necesario si debiéramos crear familias de objetos relacionados (ej: Reportes + Dashboards + Exportadores) que deban ser compatibles entre sí.
     
     @staticmethod
     def create(format_type: str) -> Report:
