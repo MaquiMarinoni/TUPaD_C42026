@@ -27,7 +27,7 @@ class HTMLReport:
     def add_footer(self, text): self.footer = text
     def render(self): self.output = f"--- HTML ---\n<h1>{self.header}</h1>\n<p>{self.data}</p>\n<footer>{self.footer}</footer>"
     def get_output(self): return self.output
-    
+
 class ReportService:
     def generate(self, data, format_type):
         # decisión de construcción mezclada con lógica de uso
@@ -47,9 +47,3 @@ class ReportService:
         report.render()
         
         return report.get_output()
-
-# --- Bloque de prueba ---
-if __name__ == "__main__":
-    servicio = ReportService()
-    resultado = servicio.generate("Datos de ventas Q1", "pdf")
-    print(resultado)

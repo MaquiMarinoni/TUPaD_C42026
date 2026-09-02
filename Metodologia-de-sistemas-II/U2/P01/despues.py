@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-# 1. La interfaz que todos los reportes cumplen (Producto)
+# interfaz que todos los reportes cumplen (Producto)
 class Report(ABC):
     @abstractmethod
     def set_data(self, data): pass
@@ -14,7 +14,7 @@ class Report(ABC):
     @abstractmethod
     def get_output(self) -> str: pass
 
-# 2. Las clases concretas (Productos Concretos)
+# clases 
 class PDFReport(Report):
     def set_data(self, data): self.data = data
     def add_header(self, text): self.header = text
@@ -44,11 +44,11 @@ class HTMLReport(Report):
     def render(self): self.output = f"--- HTML ---\n<h1>{self.header}</h1>\n<p>{self.data}</p>\n<footer>{self.footer}</footer>"
     def get_output(self) -> str: return self.output
 
-# 3. La fábrica concentra la decisión de construcción
+# Factory 
 class ReportFactory:
     
-    # Justificación Factory vs Abstract Factory:
-# Se utiliza Factory Method (variante Static Factory) porque solo necesitamos crear variantes de un unico tipo de objeto (Report). Abstract Factory sería necesario si debiéramos crear familias de objetos relacionados (ej: Reportes + Dashboards + Exportadores) que deban ser compatibles entre sí.
+# Factory Method vs. Abstract Factory)
+#    Se selecciona Factory Method en lugar de Abstract Factory porque se requiere un mecanismo para instanciar variantes de un unico producto central (Report). Abstract Factory se recomienda para escenarios donde se necesiten crear familias enteras de objetos interrelacionados que deban ser compatibles (ej: Reportes + Dashboards + Gráficos corporativos). Aplicar Abstract Factory aquí habría generado procesamiento innecesario.
     
     @staticmethod
     def create(format_type: str) -> Report:
@@ -58,24 +58,18 @@ class ReportFactory:
         elif format_type == "html": return HTMLReport()
         else: raise ValueError("Formato no soportado")
 
-# 4. El servicio ahora es agnóstico al formato
+# Implementacion
+# El metodo Static centraliza la lógica de construcción de los objetos concretos. Permite que el servicio dpermanezca desacoplado de las implementaciones y abierto a la extensión ante nuevos formatos.
+
+# El servicio ahora es agnóstico al formato
 class ReportService:
     def generate(self, data, format_type):
-        # El servicio delega la creación a la fábrica. 
-        # Ya no conoce las clases concretas.
+        # El servicio delega la creación a fabric. 
         report = ReportFactory.create(format_type)
         
-        # La lógica de uso sigue intacta, operando sobre la interfaz
         report.set_data(data)
         report.add_header("Reporte Mensual")
         report.add_footer("Generado el " + datetime.now().strftime("%Y-%m-%d"))
         report.render()
         
         return report.get_output()
-
-# --- Bloque de prueba ---
-if __name__ == "__main__":
-    servicio = ReportService()
-    # Ejecutamos con el nuevo formato pedido
-    resultado = servicio.generate("Datos de ventas Q1", "html")
-    print(resultado)
