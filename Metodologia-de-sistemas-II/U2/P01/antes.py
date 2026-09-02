@@ -21,6 +21,13 @@ class CSVReport:
     def render(self): self.output = f"--- CSV ---\nHeader: {self.header}\nData: {self.data}\nFooter: {self.footer}"
     def get_output(self): return self.output
 
+class HTMLReport:
+    def set_data(self, data): self.data = data
+    def add_header(self, text): self.header = text
+    def add_footer(self, text): self.footer = text
+    def render(self): self.output = f"--- HTML ---\n<h1>{self.header}</h1>\n<p>{self.data}</p>\n<footer>{self.footer}</footer>"
+    def get_output(self): return self.output
+    
 class ReportService:
     def generate(self, data, format_type):
         # decisión de construcción mezclada con lógica de uso
