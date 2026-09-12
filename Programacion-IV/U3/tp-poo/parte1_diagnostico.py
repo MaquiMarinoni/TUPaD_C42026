@@ -15,8 +15,23 @@ Tu trabajo (Parte 1): encontrarlos, listarlos en informe.md y corregirlos, cada 
 justificado con la inversión conceptual que lo explica.
 """
 
-import math
+import math #parte 1
+from dataclasses import dataclass #parte 2
+from abc import ABC, abstractmethod #parte 3
+from typing import Protocol #parte 4
+from libreria_externa import PlanoCAD #parte 4
 
+class Exportable(Protocol):
+    def exportar(self) -> str:
+        ... # Los puntos suspensivos indican que es solo la firma
+
+def exportar_todo(items: list[Exportable]) -> list[str]:
+    # Recorre la lista y llama al método exportar() de cada elemento
+    return [item.exportar() for item in items]
+
+@dataclass(frozen=True)
+class Etiqueta:
+    texto: str
 
 class Figura:
     def __init__(self, nombre, color):
@@ -36,84 +51,104 @@ class Figura:
 
 
 class Lado:
-    def __init__(self, longitud):
-        self._longitud = longitud
+    # Relación de Asociación (0..1) con Etiqueta
+    def __init__(self, longitud, etiqueta=None):
+        # usa la property para que valide
+        self.longitud = longitud
+        self._etiqueta = etiqueta
 
-    # >>> getter/setter con lógica de validación (estilo Java bean) <<<
-    def getLongitud(self):
+    @property
+    def longitud(self):
         return self._longitud
 
-    def setLongitud(self, valor):
+    @longitud.setter
+    def longitud(self, valor):
         if valor <= 0:
             raise ValueError("La longitud debe ser positiva")
         self._longitud = valor
 
+    @property
+    def etiqueta(self):
+        return self._etiqueta
 
-class Poligono(Figura):
 
-    # >>> atributo de clase mutable: un "static" accidental compartido <<<
-    catalogo = []
+class Poligono(Figura, ABC): # Agregamos herencia de ABC
 
-    # >>> argumento por defecto mutable (lados y observaciones) <<<
-    def __init__(self, nombre, color, lados=[], observaciones=[]):
-        # >>> super().__init__() olvidado: se re-asignan los atributos a mano <<<
-        self._nombre = nombre
-        self._color = color
-        # >>> se guarda el ALIAS de la lista recibida, sin copiarla <<<
-        self._lados = lados
-        self._observaciones = observaciones
-        Poligono.catalogo.append(self)
+    def __init__(self, nombre, color, lados=None, observaciones=None):
+        super().__init__(nombre, color)
+        self._lados = lados if lados is not None else []
+        self._observaciones = observaciones if observaciones is not None else []
 
+    # Convertimos el método en un contrato obligatorio
+    @abstractmethod
     def lados_esperados(self):
-        return 0
+        """Devuelve la cantidad de lados representada por la instancia."""
+        return len(self._lados)
 
-    # >>> bucle acumulador manual en vez de comprehension <<<
-    def perimetro(self):
-        total = 0
-        for l in self._lados:
-            total = total + l.getLongitud()
-        return total
+    def perimetro(self) -> float:
+        return sum(l.longitud for l in self._lados)
 
-    # >>> el type hint miente (-> int y devuelve str) y el "@Override" no existe <<<
-    def area(self) -> int:
-        return "area sin calcular"
+    def area(self) -> float:
+        return 0.0
 
     def agregar_observacion(self, texto):
         self._observaciones.append(texto)
 
-    def getLados(self):
-        # devuelve la lista interna tal cual (el llamador puede mutarla desde afuera)
-        return self._lados
+    def lados(self):
+        return tuple(self._lados)
 
+    def exportar(self) -> str:
+            return f"Polígono: {self._nombre} | Color: {self._color} | Lados: {len(self._lados)}"
+
+
+class Taller:
+    def __init__(self):
+        # Agregación: 0..* (arranca vacío)
+        self._poligonos = []
+
+    def recibir(self, poligono):
+        self._poligonos.append(poligono)
+
+    def restaurar(self, poligono):
+        # se limpian las observaciones
+        poligono._observaciones.clear()
+
+    def inventario(self):
+        # Copia defensiva: devuelve una tupla inmutable
+        return tuple(self._poligonos)
 
 # >>> sobrecarga de constructor estilo Java: un __init__ con ramas isinstance <<<
 class Triangulo(Poligono):
-    def __init__(self, *args):
-        if len(args) == 3:
-            super().__init__(args[0], args[1], args[2])
-        elif len(args) == 1 and isinstance(args[0], list):
-            super().__init__("triángulo", "negro", args[0])
-        else:
-            super().__init__("triángulo", "negro", [])
+    # usa argumentos por defecto en lugar de *args y ramas condicionales
+    def __init__(self, nombre="triángulo", color="negro", lados=None):
+        super().__init__(nombre, color, lados)
 
     def lados_esperados(self):
         return 3
 
 
 class Cuadrado(Poligono):
-    def __init__(self, *args):
-        if len(args) == 3:
-            super().__init__(args[0], args[1], args[2])
-        elif len(args) == 1 and isinstance(args[0], list):
-            super().__init__("cuadrado", "negro", args[0])
-        else:
-            super().__init__("cuadrado", "negro", [])
+    def __init__(self, nombre="cuadrado", color="negro", lados=None):
+        super().__init__(nombre, color, lados)
 
     def lados_esperados(self):
         return 4
 
+class Pentagono(Poligono):
+    def __init__(self, nombre="pentágono", color="negro", lados=None):
+        super().__init__(nombre, color, lados)
 
-class PoligonoRegular(Poligono):
+    def lados_esperados(self):
+        return 5
+
+
+class Hexagono(Poligono):
+    def __init__(self, nombre="hexágono", color="negro", lados=None):
+        super().__init__(nombre, color, lados)
+
+    def lados_esperados(self):
+        return 6
+
     """Polígono de N lados de igual longitud.
 
     ⚠️ PARTE 3 — esta clase NO es uno de los 8 java-ismos de la Parte 1.
@@ -125,24 +160,74 @@ class PoligonoRegular(Poligono):
     del compilador es, exactamente, la decisión que se te pide tomar, justificar
     e IMPLEMENTAR en la Parte 3.
     """
+def fabricar_poligono_regular(nombre, color, medida, cantidad):
+    """Reemplazo de la clase PoligonoRegular por una Factory Function"""
+    lados_generados = [Lado(medida) for _ in range(cantidad)]
 
-    def __init__(self, nombre, color, medida, cantidad):
-        super().__init__(nombre, color, [Lado(medida) for _ in range(cantidad)])
-        self._cantidad = cantidad
-
-    def lados_esperados(self):
-        return self._cantidad
+    if cantidad == 3:
+        return Triangulo(nombre, color, lados_generados)
+    elif cantidad == 4:
+        return Cuadrado(nombre, color, lados_generados)
+    elif cantidad == 5:
+        return Pentagono(nombre, color, lados_generados)
+    elif cantidad == 6:
+        return Hexagono(nombre, color, lados_generados)
+    else:
+        raise ValueError(f"No hay una clase específica para un polígono de {cantidad} lados.")
 
 
 if __name__ == "__main__":
     activo = True
-    if activo == True:                                      # ruido: == True
-        t = Triangulo("Triángulo", "rojo", [Lado(3), Lado(4), Lado(5)]);   # ruido: ;
+    if activo:
+        # prueba asociación (Etiqueta -> Lado)
+        eti_base = Etiqueta("Base inferior")
+        l1 = Lado(3, eti_base)
+        l2 = Lado(4)
+        l3 = Lado(5)
+        
+        # 2prueba composición (Triangulo instanciando/recibiendo sus lados)
+        t = Triangulo("Triángulo", "rojo", [l1, l2, l3])
         c = Cuadrado("Cuadrado", "azul", [Lado(2), Lado(2), Lado(2), Lado(2)])
-        print("Perímetro del triángulo: " + str(t.perimetro()))            # ruido: +
-        print("Perímetro del cuadrado: " + str(c.perimetro()))
-        t.agregar_observacion("revisar el vértice A")
-        print("Figuras en el catálogo: " + str(len(Poligono.catalogo)))
-        print("Nombre (via getter): " + t.getNombre())
-        r = PoligonoRegular("Pentágono", "verde", 4, 5)
-        print("Perímetro del pentágono: " + str(r.perimetro()))
+        # reemplaza la instanciación de la clase por el llamado a la fábrica
+        r = fabricar_poligono_regular("Pentágono Regular", "verde", 4, 5)
+        print(f"Perímetro del pentágono (vía factory): {r.perimetro()}")
+        
+        c.agregar_observacion("revisar el vértice A")
+        
+        # prueba agregación (Taller)
+        mi_taller = Taller()
+        mi_taller.recibir(t)
+        mi_taller.recibir(c)
+        mi_taller.recibir(r)
+        
+        # prueba la copia defensiva y la restauración
+        print(f"Inventario del taller: {len(mi_taller.inventario())} polígonos")
+        print(f"Observaciones del Cuadrado (ANTES): {c._observaciones}")
+        print(f"Inventario final del taller: {len(mi_taller.inventario())} polígonos")
+        
+        mi_taller.restaurar(c)
+        print(f"Observaciones del Cuadrado (DESPUÉS de restaurar): {c._observaciones}")
+
+        # DEMOSTRACIÓN PARTE 3: Falla Temprana por contrato ABC
+        print("\n--- Probando Falla Temprana (ABC) ---")
+        class HeptagonoDefectuoso(Poligono):
+            # Olvidamos implementar lados_esperados() a propósito
+            pass
+        
+        try:
+            # Esto debe fallar al intentar construir la instancia
+            h_roto = HeptagonoDefectuoso("Heptágono Roto", "Gris", [])
+        except TypeError as e:
+            print(f"Falla Temprana exitosa. Python impidió la creación: {e}")
+
+        """PARTE 4: Demostración de Protocol (Duck Typing)"""
+        print("\n--- Probando Exportar Todo (Protocol) ---")
+        mi_plano = PlanoCAD("Planta Baja", "1:50")
+
+        # arma lista de exportables (objetos que no son familia, pero cumplen el contrato)
+        elementos_mezclados = [c, mi_plano] # 'c' es el cuadrado que ya tiene
+
+        print("\n--- Exportando Elementos ---")
+        resultados = exportar_todo(elementos_mezclados)
+        for res in resultados:
+            print(res)
