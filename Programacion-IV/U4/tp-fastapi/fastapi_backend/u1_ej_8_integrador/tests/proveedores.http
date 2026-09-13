@@ -1,0 +1,70 @@
+### HU-01: Crear un proveedor exitosamente (Debe devolver 201 Created)
+POST http://localhost:8000/proveedores/
+Content-Type: application/json
+
+{
+  "codigo": "PROV-001",
+  "razon_social": "Distribuidora Tech",
+  "cuit": "30-12345678-9",
+  "email": "contacto@distritech.com",
+  "telefono": "555-0123"
+}
+
+### HU-01 / RN-01 y RN-03: Fallo por validación Pydantic (Debe devolver 422 Unprocessable Entity)
+POST http://localhost:8000/proveedores/
+Content-Type: application/json
+
+{
+  "codigo": "",
+  "razon_social": "A",
+  "cuit": "30-00000000-0"
+}
+
+### HU-01 / RN-02: Fallo por código duplicado (Debe devolver 409 Conflict)
+# Ejecutar esto DESPUÉS de haber creado PROV-001 exitosamente
+POST http://localhost:8000/proveedores/
+Content-Type: application/json
+
+{
+  "codigo": "PROV-001",
+  "razon_social": "Otra Empresa",
+  "cuit": "33-11111111-9"
+}
+
+### HU-02: Listar proveedores (Debe devolver 200 OK y la lista)
+GET http://localhost:8000/proveedores/?skip=0&limit=10
+
+### HU-03: Consultar proveedor por ID (Debe devolver 200 OK)
+GET http://localhost:8000/proveedores/1
+
+### HU-03 / RN-04: Consultar ID inexistente (Debe devolver 404 Not Found)
+GET http://localhost:8000/proveedores/999
+
+### HU-04: Actualizar proveedor (Debe devolver 200 OK)
+PUT http://localhost:8000/proveedores/1
+Content-Type: application/json
+
+{
+  "codigo": "PROV-001",
+  "razon_social": "Distribuidora Tech Actualizada",
+  "cuit": "30-12345678-9",
+  "email": "nuevo@distritech.com",
+  "telefono": "555-9999",
+  "activo": true
+}
+
+### HU-04 / RN-04: Actualizar ID inexistente (Debe devolver 404 Not Found)
+PUT http://localhost:8000/proveedores/999
+Content-Type: application/json
+
+{
+  "codigo": "PROV-999",
+  "razon_social": "Empresa Fantasma",
+  "cuit": "33-00000000-9"
+}
+
+### HU-05: Desactivar proveedor (Debe devolver 200 OK y activo: false)
+PUT http://localhost:8000/proveedores/1/desactivar
+
+### HU-05 / RN-05: Fallo al desactivar proveedor ya inactivo (Debe devolver 409 Conflict)
+PUT http://localhost:8000/proveedores/1/desactivar
