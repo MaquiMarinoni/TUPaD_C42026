@@ -95,7 +95,7 @@ classDiagram
 
     ProductoDestacado "1" *-- "1" Producto : envoltura/composición
 
-    Producto ..> Exportable : conformidad estructural
-    FichaPuntoDeVenta ..> Exportable : conformidad estructural
-    ProductoDestacado ..> Exportable : conformidad estructural
+    Producto ..|> Exportable : conformidad estructural
+    FichaPuntoDeVenta ..|> Exportable : conformidad estructural
+    ProductoDestacado ..|> Exportable : conformidad estructural
 ```

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Protocol
 
-# --- Excepciones de Dominio ---
+# excepciones de Dominio
 
 class ErrorCatalogo(ValueError):
     """Excepción base para los errores de la aplicación de catálogo."""
@@ -14,7 +14,7 @@ class ErrorValidacionCatalogo(ErrorCatalogo):
     pass
 
 
-# --- Modelado del Catálogo ---
+# modelado del catálogo 
 
 @dataclass(frozen=True)
 class UnidadMedida:
@@ -95,12 +95,10 @@ class Producto(ABC):
         self._habilitado: bool = True
         self._unidad_venta: UnidadMedida | None = unidad_venta
 
-        # Composición: el todo fabrica internamente la parte
+        # composición: el todo fabrica internamente la parte
         self._clasificaciones: list[ProductoCategoria] = [
             ProductoCategoria(categoria_principal, es_principal=True)
         ]
-
-    # --- Properties de Solo Lectura y Estado Derivado ---
 
     @property
     def nombre(self) -> str:
@@ -124,7 +122,7 @@ class Producto(ABC):
             return f"$ {self._precio_base:.2f}/{self._unidad_venta.simbolo}"
         return f"$ {self._precio_base:.2f}"
 
-    # --- Gestión de Estado de Habilitación ---
+    # gestión estado de habilitación 
 
     def habilitar(self) -> None:
         self._habilitado = True
@@ -132,7 +130,7 @@ class Producto(ABC):
     def deshabilitar(self) -> None:
         self._habilitado = False
 
-    # --- Gestión de Clasificaciones (Composición e Invariante) ---
+    # Composición e invariante
 
     def clasificar_en(self, categoria: Categoria, es_principal: bool = False) -> None:
         if not isinstance(categoria, Categoria):
@@ -163,7 +161,7 @@ class Producto(ABC):
                 return pc.categoria
         raise ErrorCatalogo("Estado inconsistente: el producto no posee categoría principal.")
 
-    # --- Contrato y Exportación ---
+    # contrato y exportación 
 
     def exportar(self) -> str:
         return f"PRODUCTO|{self._nombre}|{self.precio_publicado}|disp={self.disponible}"
@@ -175,10 +173,13 @@ class Producto(ABC):
 class ProductoSimple(Producto):
     """Producto comercializado por pieza o unidad entera."""
 
-    def precio_final(self, cantidad: float = 1.0) -> float:
-        if cantidad <= 0:
-            raise ErrorValidacionCatalogo("La cantidad solicitada debe ser mayor a cero.")
-        return round(self._precio_base * cantidad, 2)
+    def precio_final(self, cantidad: float) -> float:
+        # validación: entero y >= 1 (ejemplo: 3 y 3.0 válidos, 2.5 inválido)
+        if cantidad < 1 or (isinstance(cantidad, float) and not cantidad.is_integer()):
+            raise ErrorValidacionCatalogo(
+                "La cantidad para producto simple debe ser un valor entero mayor o igual a 1."
+            )
+        return float(self._precio_base * cantidad)
 
 
 class ProductoPorPeso(Producto):
@@ -187,7 +188,9 @@ class ProductoPorPeso(Producto):
     def precio_final(self, cantidad: float) -> float:
         if cantidad <= 0:
             raise ErrorValidacionCatalogo("La cantidad por peso debe ser mayor a cero.")
-        return round(self._precio_base * cantidad, 2)
+        # Solo ProductoPorPeso redondea a 2 decimales
+        return round(float(self._precio_base * cantidad), 2)
+
 
 class ProductoCombo(Producto):
     """Agrupa entre 2 y N productos preexistentes aplicando un descuento."""
@@ -201,38 +204,43 @@ class ProductoCombo(Producto):
     ) -> None:
         if not componentes or len(componentes) < 2:
             raise ErrorValidacionCatalogo("Un combo debe contener al menos 2 productos componentes.")
-        
+
         for comp in componentes:
             if not isinstance(comp, Producto):
                 raise ErrorValidacionCatalogo("Todos los componentes de un combo deben ser instancias de Producto.")
 
         if not (0.0 <= descuento < 1.0):
-            raise ErrorValidacionCatalogo("El descuento debe ser un valor decimal entre 0.0 y 1.0 (excluyente).")
+            raise ErrorValidacionCatalogo("El descuento debe ser un valor decimal en el rango [0.0, 1.0).")
 
         self._componentes: list[Producto] = list(componentes)
         self._descuento: float = float(descuento)
 
-        # El precio base se deriva de la suma de los precios base con el descuento aplicado
-        suma_base = sum(comp.precio_base for comp in self._componentes)
-        precio_base_combo = round(suma_base * (1.0 - self._descuento), 2)
+        subtotal_componentes = sum(comp.precio_final(1) for comp in self._componentes)
+        precio_base_combo = subtotal_componentes * (1.0 - self._descuento)
 
         super().__init__(
             nombre=nombre,
             precio_base=precio_base_combo,
-            stock_cantidad=1.0,
+            stock_cantidad=0.0,  
             categoria_principal=categoria_principal,
             unidad_venta=None,
         )
 
+    @property
+    def disponible(self) -> bool:
+        """Un combo está disponible si está habilitado y todos sus componentes están disponibles."""
+        return self._habilitado and all(comp.disponible for comp in self._componentes)
+
     def componentes(self) -> tuple[Producto, ...]:
-        """Retorno inmutable de los componentes agregados."""
         return tuple(self._componentes)
 
-    def precio_final(self, cantidad: float = 1.0) -> float:
-        if cantidad <= 0:
-            raise ErrorValidacionCatalogo("La cantidad de combos solicitada debe ser mayor a cero.")
-        return round(self._precio_base * cantidad, 2)
-
+    def precio_final(self, cantidad: float) -> float:
+        if cantidad < 1 or (isinstance(cantidad, float) and not cantidad.is_integer()):
+            raise ErrorValidacionCatalogo(
+                "La cantidad de combos debe ser un valor entero mayor o igual a 1."
+            )
+        subtotal_componentes = sum(comp.precio_final(1) for comp in self._componentes)
+        return float(subtotal_componentes * (1.0 - self._descuento) * cantidad)
 class ProductoDestacado:
     """Envoltorio que otorga visibilidad de vidriera a un Producto mediante composición."""
 
@@ -253,7 +261,7 @@ class ProductoDestacado:
     def orden_vidriera(self) -> int:
         return self._orden_vidriera
 
-    # Delegación transparente de la interfaz de Producto
+    # delegación transparente de la interfaz de Producto
     @property
     def nombre(self) -> str:
         return self._producto.nombre
@@ -293,7 +301,7 @@ def exportar_catalogo(elementos: list[Exportable]) -> list[str]:
 
     resultado: list[str] = []
     for elem in elementos:
-        # Validación defensiva en runtime de cumplimiento del protocolo
+        # validación defensiva en runtime de cumplimiento del protocolo
         if not hasattr(elem, "exportar") or not callable(getattr(elem, "exportar")):
             raise ErrorValidacionCatalogo(f"El objeto {elem!r} no cumple el contrato Exportable.")
         resultado.append(elem.exportar())
