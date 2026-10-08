@@ -1,0 +1,115 @@
+{
+  "info": {
+    "name": "TP Unidad 5 - Migracion Productos FastAPI + PostgreSQL",
+    "description": "Colección de pruebas de endpoints migrados desde el TP de la Unidad 4 con persistencia en PostgreSQL.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Alta de Producto (POST)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Silla de Oficina\",\n  \"categoria\": \"MUE-01\",\n  \"precio\": 150.50,\n  \"stock\": 20,\n  \"stock_minimo\": 5,\n  \"activo\": true\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/productos/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["productos", ""]
+        }
+      }
+    },
+    {
+      "name": "2. Listar Productos Paginados (GET)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/productos/?skip=0&limit=10",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["productos", ""],
+          "query": [
+            { "key": "skip", "value": "0" },
+            { "key": "limit", "value": "10" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Detalle de Producto por ID (GET)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/productos/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["productos", "1"]
+        }
+      }
+    },
+    {
+      "name": "4. Actualizar Producto Total (PUT)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Silla de Oficina Premium\",\n  \"categoria\": \"MUE-01\",\n  \"precio\": 190.00,\n  \"stock\": 3,\n  \"stock_minimo\": 5,\n  \"activo\": true\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8000/productos/1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["productos", "1"]
+        }
+      }
+    },
+    {
+      "name": "5. Consultar Estado de Stock (GET)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/productos/1/stock",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["productos", "1", "stock"]
+        }
+      }
+    },
+    {
+      "name": "6. Borrado Logico - Desactivar (PUT)",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8000/productos/1/desactivar",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "8000",
+          "path": ["productos", "1", "desactivar"]
+        }
+      }
+    }
+  ]
+}

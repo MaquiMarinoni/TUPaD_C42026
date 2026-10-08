@@ -1,0 +1,68 @@
+@baseUrl = http://localhost:8000
+
+### 1. ALTA DE PRODUCTO 1 (Stock normal) - Esperado: 201 Created
+POST {{baseUrl}}/productos/
+Content-Type: application/json
+
+{
+  "nombre": "Silla de Oficina Ergonómica",
+  "categoria": "MUE-01",
+  "precio": 150.50,
+  "stock": 20,
+  "stock_minimo": 5,
+  "activo": true
+}
+
+### 2. ALTA DE PRODUCTO 2 (Bajo stock mínimo para probar alerta) - Esperado: 201 Created
+POST {{baseUrl}}/productos/
+Content-Type: application/json
+
+{
+  "nombre": "Escritorio Gamer",
+  "categoria": "MUE-02",
+  "precio": 320.00,
+  "stock": 2,
+  "stock_minimo": 5,
+  "activo": true
+}
+
+### 3. PRUEBA DE VALIDACIÓN REGEX CATEGORÍA INVÁLIDA - Esperado: 422 Unprocessable Entity
+POST {{baseUrl}}/productos/
+Content-Type: application/json
+
+{
+  "nombre": "Producto Fallido",
+  "categoria": "invalida",
+  "precio": 100.00,
+  "stock": 10,
+  "stock_minimo": 2,
+  "activo": true
+}
+
+### 4. LISTAR PRODUCTOS PAGINADOS - Esperado: 200 OK
+GET {{baseUrl}}/productos/?skip=0&limit=10
+
+### 5. OBTENER DETALLE DE PRODUCTO POR ID - Esperado: 200 OK
+GET {{baseUrl}}/productos/1
+
+### 6. ACTUALIZACIÓN TOTAL (PUT) - Esperado: 200 OK
+PUT {{baseUrl}}/productos/1
+Content-Type: application/json
+
+{
+  "nombre": "Silla de Oficina Ergonómica Pro",
+  "categoria": "MUE-01",
+  "precio": 185.00,
+  "stock": 15,
+  "stock_minimo": 5,
+  "activo": true
+}
+
+### 7. CONSULTAR ESTADO DE STOCK (Lógica de negocio: alerta_stock) - Esperado: 200 OK
+GET {{baseUrl}}/productos/2/stock
+
+### 8. BORRADO LÓGICO (Desactivar producto) - Esperado: 200 OK (activo pasa a false)
+PUT {{baseUrl}}/productos/1/desactivar
+
+### 9. BUSCAR PRODUCTO INEXISTENTE - Esperado: 404 Not Found
+GET {{baseUrl}}/productos/999
