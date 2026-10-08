@@ -1,0 +1,17 @@
+# Entorno virtual y cachés de Python (Backend)
+backend/venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Dependencias y compilados de Node/Vite (Frontend)
+tp-productos/node_modules/
+node_modules/
+tp-productos/dist/
+dist/
+.vite/
+
+# Carpetas temporales y variables de entorno locales
+entrega_temp/
+.env
