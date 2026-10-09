@@ -4,7 +4,7 @@ import type { Categoria, CategoriaFormData } from "./types/categoria";
 import { Navbar } from "./components/Navbar";
 import { CategoriaList } from "./components/CategoriaList";
 import { CategoriaModal } from "./components/CategoriaModal";
-import { Footer } from "./components/footer";
+import { Footer } from "./components/Footer";
 
 // URL base de la API FastAPI
 const API_URL = "http://localhost:8000/categorias";

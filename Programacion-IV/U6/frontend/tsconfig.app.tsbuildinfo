@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/components/categoriacard.tsx","./src/components/categorialist.tsx","./src/components/categoriamodal.tsx","./src/components/footer.tsx","./src/components/navbar.tsx","./src/src/vite-env.d.ts","./src/types/categoria.ts"],"version":"6.0.3"}
