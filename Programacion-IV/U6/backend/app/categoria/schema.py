@@ -1,17 +1,14 @@
 # app/categoria/schema.py
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-# Esquema para crear una categoría (sin ID)
 class CategoriaCreate(BaseModel):
-    nombre: str
-    descripcion: str
+    nombre: str = Field(min_length=1, max_length=100, description="El nombre no puede estar vacío")
+    descripcion: str = Field(default="", max_length=255)
 
-# Esquema para actualizar una categoría
 class CategoriaUpdate(BaseModel):
-    nombre: str
-    descripcion: str
+    nombre: str = Field(min_length=1, max_length=100, description="El nombre no puede estar vacío")
+    descripcion: str = Field(default="", max_length=255)
 
-# Esquema para respuesta (con ID)
 class CategoriaResponse(BaseModel):
     id: int
     nombre: str

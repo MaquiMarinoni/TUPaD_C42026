@@ -1,9 +1,10 @@
-// src/App.tsx
+
 import { useState, useEffect } from "react";
 import type { Categoria, CategoriaFormData } from "./types/categoria";
 import { Navbar } from "./components/Navbar";
 import { CategoriaList } from "./components/CategoriaList";
 import { CategoriaModal } from "./components/CategoriaModal";
+import { Footer } from "./components/footer";
 
 // URL base de la API FastAPI
 const API_URL = "http://localhost:8000/categorias";
@@ -160,7 +161,6 @@ export const App = () => {
         {errorMessage && (
           <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <span>⚠️</span>
               <span>
                 <strong>Aviso:</strong> {errorMessage} Pasaremos al backend en el próximo paso para conectar todo.
               </span>
@@ -178,7 +178,7 @@ export const App = () => {
         {isLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent"></div>
-            <p className="mt-2 text-sm text-gray-500">Cargando categorías...</p>
+            <p className="mt-2 text-sm text-gray-500">Cargando categorías</p>
           </div>
         ) : (
           <CategoriaList
@@ -196,6 +196,9 @@ export const App = () => {
         onSubmit={handleSaveModal}
         categoriaToEdit={categoriaToEdit}
       />
+
+      <Footer />
+
     </div>
   );
 };

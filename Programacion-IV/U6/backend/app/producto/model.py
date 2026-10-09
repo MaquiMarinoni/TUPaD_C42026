@@ -1,15 +1,14 @@
-# app/producto/model.py
 from typing import Optional
 from sqlmodel import SQLModel, Field
 
-# 1. Tabla intermedia para la relación N:N
+# Tabla intermedia para la relación N:N
 class ProductoCategoria(SQLModel, table=True):
     __tablename__ = "producto_categoria"
 
     producto_id: int = Field(foreign_key="productos.id", primary_key=True)
     categoria_id: int = Field(foreign_key="categorias.id", primary_key=True)
 
-# 2. Entidad Producto
+# Entidad Producto
 class Producto(SQLModel, table=True):
     __tablename__ = "productos"
 

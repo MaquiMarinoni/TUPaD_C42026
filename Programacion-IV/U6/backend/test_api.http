@@ -1,0 +1,119 @@
+@baseUrl = http://localhost:8000
+
+# -------------------------------------------------------------
+# 1. CATEGORIAS
+# -------------------------------------------------------------
+
+### Listar todas las categorias
+GET {{baseUrl}}/categorias
+Accept: application/json
+
+### Obtener categoria por ID
+GET {{baseUrl}}/categorias/1
+Accept: application/json
+
+### Crear una nueva categoria
+POST {{baseUrl}}/categorias
+Content-Type: application/json
+
+{
+  "nombre": "Promociones",
+  "descripcion": "Combos especiales y descuentos del dia"
+}
+
+### Actualizar categoria existente
+PUT {{baseUrl}}/categorias/1
+Content-Type: application/json
+
+{
+  "nombre": "Pizzas Gourmet",
+  "descripcion": "Pizzas artesanales con masa madre e ingredientes premium"
+}
+
+### Eliminar categoria
+DELETE {{baseUrl}}/categorias/6
+Accept: application/json
+
+# -------------------------------------------------------------
+# 2. PRODUCTOS
+# -------------------------------------------------------------
+
+### Listar todos los productos
+GET {{baseUrl}}/productos
+Accept: application/json
+
+### Crear Producto 1 (Pizza Margherita)
+POST {{baseUrl}}/productos
+Content-Type: application/json
+
+{
+  "nombre": "Pizza Margherita",
+  "descripcion": "Salsa de tomate casera, mozzarella y albahaca fresca",
+  "precio_base": "8500.00",
+  "imagen_url": [
+    "https://images.unsplash.com/photo-1604382355076-af4b0eb60143?w=500"
+  ],
+  "disponible": true
+}
+
+### Crear Producto 2 (Hamburguesa Doble Cheddar)
+POST {{baseUrl}}/productos
+Content-Type: application/json
+
+{
+  "nombre": "Hamburguesa Doble Cheddar",
+  "descripcion": "Doble medallon de carne, queso cheddar y panceta",
+  "precio_base": "9800.00",
+  "imagen_url": [
+    "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500"
+  ],
+  "disponible": true
+}
+
+### Obtener Producto por ID
+GET {{baseUrl}}/productos/1
+Accept: application/json
+
+### Actualizar Producto 1
+PUT {{baseUrl}}/productos/1
+Content-Type: application/json
+
+{
+  "precio_base": "9200.00",
+  "disponible": true
+}
+
+# -------------------------------------------------------------
+# 3. RELACION N:N (Producto - Categoria)
+# -------------------------------------------------------------
+
+### Vincular Producto 1 a Categoria 1
+POST {{baseUrl}}/productos/categorias/vincular
+Content-Type: application/json
+
+{
+  "producto_id": 1,
+  "categoria_id": 1
+}
+
+### Vincular Producto 2 a Categoria 2
+POST {{baseUrl}}/productos/categorias/vincular
+Content-Type: application/json
+
+{
+  "producto_id": 2,
+  "categoria_id": 2
+}
+
+### Listar categorias del Producto 1
+GET {{baseUrl}}/productos/1/categorias
+Accept: application/json
+
+### Desvincular Producto 1 de Categoria 1
+DELETE {{baseUrl}}/productos/categorias/desvincular
+Content-Type: application/json
+
+{
+  "producto_id": 1,
+  "categoria_id": 1
+}

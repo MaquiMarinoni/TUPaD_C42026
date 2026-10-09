@@ -1,5 +1,3 @@
-    // src/components/Navbar.tsx
-
     interface NavbarProps {
     titulo?: string;
     }
@@ -9,14 +7,11 @@
         <header className="bg-slate-900 text-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-3">
-            <span className="text-2xl">🍔</span>
+
             <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
                 {titulo}
             </h1>
             </div>
-            <span className="text-xs bg-indigo-600 text-white font-semibold px-2.5 py-1 rounded-full uppercase tracking-wider">
-            UTN - Programación IV
-            </span>
         </div>
         </header>
     );

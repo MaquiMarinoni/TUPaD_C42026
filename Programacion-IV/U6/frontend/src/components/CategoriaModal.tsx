@@ -1,4 +1,4 @@
-    // src/components/CategoriaModal.tsx
+
     import { useState, useEffect } from "react";
     import type { Categoria, CategoriaFormData } from "../types/categoria";
 
@@ -68,7 +68,7 @@
                 required
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                placeholder="Ej: Pizzas, Bebidas..."
+                placeholder="Ej: Pizzas, Bebidas"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-gray-800"
                 />
             </div>
@@ -82,7 +82,7 @@
                 rows={3}
                 value={descripcion}
                 onChange={(e) => setDescripcion(e.target.value)}
-                placeholder="Breve descripción de la categoría..."
+                placeholder="Breve descripción de la categoría"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm text-gray-800"
                 />
             </div>
