@@ -1,123 +1,175 @@
 @baseUrl = http://localhost:8000
 
-# -------------------------------------------------------------
-# 1. CATEGORIAS
-# -------------------------------------------------------------
+# ==========================================
+# 0. HEALTH & UNIDADES DE MEDIDA (CATÁLOGO)
+# ==========================================
 
-### Listar todas las categorias
-GET {{baseUrl}}/categorias
+### Health Check API
+GET {{baseUrl}}/health/
 Accept: application/json
 
-### Obtener categoria por ID
+### Health Check Base de Datos
+GET {{baseUrl}}/health/db
+Accept: application/json
+
+### Listar Unidades de Medida (Seed Data)
+GET {{baseUrl}}/unidades-medida/
+Accept: application/json
+
+### Obtener Unidad de Medida por ID
+GET {{baseUrl}}/unidades-medida/1
+Accept: application/json
+
+
+# ==========================================
+# 1. CATEGORÍAS (CRUD + Paginación + RN-05)
+# ==========================================
+
+### Listar Categorías (paginado y filtro opcional)
+GET {{baseUrl}}/categorias/?offset=0&limit=10
+Accept: application/json
+
+### Crear Categoría (201 Created)
+POST {{baseUrl}}/categorias/
+Content-Type: application/json
+
+{
+  "nombre": "Empanadas",
+  "descripcion": "Empanadas al horno y fritas"
+}
+
+### Obtener Categoría por ID
 GET {{baseUrl}}/categorias/1
 Accept: application/json
 
-### Crear una nueva categoria
-POST {{baseUrl}}/categorias
+### Actualizar Categoría (PUT)
+PUT {{baseUrl}}/categorias/7
 Content-Type: application/json
 
 {
-  "nombre": "Promociones",
-  "descripcion": "Combos especiales y descuentos del dia"
+  "nombre": "Empanadas Tucumanas",
+  "descripcion": "Cortadas a cuchillo al horno de barro"
 }
 
-### Actualizar categoria existente
-PUT {{baseUrl}}/categorias/1
-Content-Type: application/json
+### Intentar eliminar Categoría 1 con productos asociados (Debe dar 409 Conflict por RN-05)
+DELETE {{baseUrl}}/categorias/1
 
-{
-  "nombre": "Pizzas Gourmet",
-  "descripcion": "Pizzas artesanales con masa madre e ingredientes premium"
-}
+### Eliminar Categoría 7 sin productos asociados (Debe dar 204 No Content - Soft Delete)
+DELETE {{baseUrl}}/categorias/7
 
-### Eliminar categoria
-DELETE {{baseUrl}}/categorias/6
+
+# ==========================================
+# 2. INGREDIENTES (CRUD)
+# ==========================================
+
+### Listar Ingredientes
+GET {{baseUrl}}/ingredientes/?offset=0&limit=10
 Accept: application/json
 
-# -------------------------------------------------------------
-# 2. PRODUCTOS
-# -------------------------------------------------------------
-
-### Listar todos los productos
-GET {{baseUrl}}/productos
-Accept: application/json
-
-### Crear Producto 1 (Pizza Margherita)
-POST {{baseUrl}}/productos
+### Crear Ingrediente (201 Created)
+POST {{baseUrl}}/ingredientes/
 Content-Type: application/json
 
 {
-  "nombre": "Pizza Margherita",
-  "descripcion": "Salsa de tomate casera, mozzarella y albahaca fresca",
-  "precio_base": "8500.00",
-  "imagen_url": [
-    "https://images.unsplash.com/photo-1604382355076-af4b0eb60143?w=500"
-  ],
-  "disponible": true
+  "nombre": "Panceta Ahumada",
+  "descripcion": "Fetas de panceta crocante",
+  "unidad_medida_id": 2
 }
 
-### Crear Producto 2 (Hamburguesa Doble Cheddar)
-POST {{baseUrl}}/productos
+### Obtener Ingrediente por ID
+GET {{baseUrl}}/ingredientes/1
+Accept: application/json
+
+### Actualizar Ingrediente
+PUT {{baseUrl}}/ingredientes/5
 Content-Type: application/json
 
 {
-  "nombre": "Hamburguesa Doble Cheddar",
-  "descripcion": "Doble medallon de carne, queso cheddar y panceta",
-  "precio_base": "9800.00",
-  "imagen_url": [
-    "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500"
+  "nombre": "Panceta Ahumada Premium",
+  "descripcion": "Fetas gruesas de panceta ahumada",
+  "unidad_medida_id": 2
+}
+
+### Eliminar Ingrediente (204 No Content - Soft Delete)
+DELETE {{baseUrl}}/ingredientes/5
+
+
+# ==========================================
+# 3. PRODUCTOS Y RELACIONES N:M (HU-06 y HU-07)
+# ==========================================
+
+### Listar Productos
+GET {{baseUrl}}/productos/?offset=0&limit=10
+Accept: application/json
+
+### Crear Producto con Categorías e Ingredientes (201 Created)
+POST {{baseUrl}}/productos/
+Content-Type: application/json
+
+{
+  "nombre": "Hamburguesa Bacon King",
+  "descripcion": "Medallón doble con cheddar y panceta",
+  "precio_base": 10500,
+  "imagenes_url": [
+    "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=500"
   ],
-  "disponible": true
+  "disponible": true,
+  "categoria_ids": [1, 6],
+  "ingredientes": [
+    { "ingrediente_id": 1, "cantidad": 300 },
+    { "ingrediente_id": 2, "cantidad": 60 }
+  ]
+}
+
+### Validación RN-19: Crear Producto sin categoria_ids (Debe dar 422 Unprocessable Entity)
+POST {{baseUrl}}/productos/
+Content-Type: application/json
+
+{
+  "nombre": "Producto inválido sin categorías",
+  "descripcion": "Debe fallar con 422",
+  "precio_base": 5000,
+  "imagenes_url": [],
+  "disponible": true,
+  "categoria_ids": []
 }
 
 ### Obtener Producto por ID
 GET {{baseUrl}}/productos/1
 Accept: application/json
 
-### Actualizar Producto 1
-PUT {{baseUrl}}/productos/1
+### Actualizar Producto y reemplazar sus relaciones N:M (RN-12 y RN-21)
+PUT {{baseUrl}}/productos/3
 Content-Type: application/json
 
 {
-  "precio_base": "9200.00",
-  "disponible": true
+  "nombre": "Hamburguesa Bacon King Especial",
+  "descripcion": "Versión mejorada con triple cheddar",
+  "precio_base": 11500,
+  "imagenes_url": [
+    "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=500"
+  ],
+  "disponible": true,
+  "categoria_ids": [1],
+  "ingredientes": [
+    { "ingrediente_id": 1, "cantidad": 300 },
+    { "ingrediente_id": 2, "cantidad": 120 },
+    { "ingrediente_id": 3, "cantidad": 1 }
+  ]
 }
 
-### Eliminar Producto 1
-DELETE {{baseUrl}}/productos/1
-Accept: application/json
-
-# -------------------------------------------------------------
-# 3. RELACION N:N (Producto - Categoria)
-# -------------------------------------------------------------
-
-### Vincular Producto 1 a Categoria 1
-POST {{baseUrl}}/productos/categorias/vincular
-Content-Type: application/json
-
-{
-  "producto_id": 1,
-  "categoria_id": 1
-}
-
-### Vincular Producto 2 a Categoria 2
-POST {{baseUrl}}/productos/categorias/vincular
-Content-Type: application/json
-
-{
-  "producto_id": 2,
-  "categoria_id": 2
-}
-
-### Listar categorias del Producto 1
+### HU-07: Consultar Categorías de un Producto
 GET {{baseUrl}}/productos/1/categorias
 Accept: application/json
 
-### Desvincular Producto 1 de Categoria 1
-DELETE {{baseUrl}}/productos/categorias/desvincular
-Content-Type: application/json
+### HU-07: Consultar Ingredientes de un Producto
+GET {{baseUrl}}/productos/1/ingredientes
+Accept: application/json
 
-{
-  "producto_id": 1,
-  "categoria_id": 1
-}
+### HU-07: Consultar Productos de una Categoría
+GET {{baseUrl}}/categorias/1/productos
+Accept: application/json
+
+### Eliminar Producto (204 No Content - Borra en cascada relaciones N:M y aplica Soft Delete)
+DELETE {{baseUrl}}/productos/3
+Accept: application/json

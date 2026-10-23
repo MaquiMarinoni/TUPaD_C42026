@@ -1,166 +1,296 @@
 import json
-from typing import List
+from datetime import datetime, timezone
+from typing import Optional, Union
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlmodel import Session, select
 
-from app.producto.model import Producto, ProductoCategoria
-from app.producto.schema import ProductoCreate, ProductoUpdate, ProductoResponse
 from app.categoria.model import Categoria
+from app.categoria.schema import CategoriaRead
+from app.ingrediente.model import Ingrediente
+from app.producto.model import Producto, ProductoCategoria, ProductoIngrediente
+from app.producto.schema import (
+    ProductoCreate,
+    ProductoIngredienteInput,
+    ProductoPaginatedResponse,
+    ProductoRead,
+    ProductoUpdate,
+)
+
 
 class ProductoService:
     @staticmethod
-    def _to_response(db_prod: Producto) -> ProductoResponse:
+    def _to_read(session: Session, producto: Producto) -> ProductoRead:
         try:
-            urls = json.loads(db_prod.imagen_url_raw)
+            imagenes = json.loads(producto.imagenes_url) if producto.imagenes_url else []
         except Exception:
-            urls = []
-        return ProductoResponse(
-            id=db_prod.id,
-            nombre=db_prod.nombre,
-            descripcion=db_prod.descripcion,
-            precio_base=db_prod.precio_base,
-            imagen_url=urls,
-            disponible=db_prod.disponible
+            imagenes = []
+
+        enlaces = session.exec(
+            select(ProductoCategoria).where(ProductoCategoria.producto_id == producto.id)
+        ).all()
+        cat_ids = [e.categoria_id for e in enlaces]
+
+        return ProductoRead(
+            id=producto.id,
+            nombre=producto.nombre,
+            descripcion=producto.descripcion,
+            precio_base=producto.precio_base,
+            imagenes_url=imagenes,
+            disponible=producto.disponible,
+            categoria_ids=cat_ids,
+            created_at=producto.created_at,
+            updated_at=producto.updated_at,
+            deleted_at=producto.deleted_at,
         )
 
-    @classmethod
-    def get_all(cls, session: Session) -> List[ProductoResponse]:
-        productos = session.exec(select(Producto).order_by(Producto.id)).all()
-        return [cls._to_response(p) for p in productos]
-
-    @classmethod
-    def get_by_id(cls, session: Session, producto_id: int) -> ProductoResponse:
-        prod = session.get(Producto, producto_id)
-        if not prod:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Producto con id {producto_id} no encontrado"
-            )
-        return cls._to_response(prod)
-
-    @classmethod
-    def create(cls, session: Session, producto_in: ProductoCreate) -> ProductoResponse:
-        # Validación de duplicados
-        statement = select(Producto).where(Producto.nombre.ilike(producto_in.nombre.strip()))
-        existe = session.exec(statement).first()
-        if existe:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail=f"Ya existe un producto con el nombre '{producto_in.nombre}'"
-            )
-
-        raw_urls = json.dumps(producto_in.imagen_url)
-        db_prod = Producto(
-            nombre=producto_in.nombre.strip(),
-            descripcion=producto_in.descripcion.strip(),
-            precio_base=producto_in.precio_base.strip(),
-            imagen_url_raw=raw_urls,
-            disponible=producto_in.disponible
-        )
-        session.add(db_prod)
-        session.commit()
-        session.refresh(db_prod)
-        return cls._to_response(db_prod)
-
-    @classmethod
-    def update(cls, session: Session, producto_id: int, producto_in: ProductoUpdate) -> ProductoResponse:
-        db_prod = session.get(Producto, producto_id)
-        if not db_prod:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Producto con id {producto_id} no encontrado"
-            )
-
-        if producto_in.nombre is not None:
-            # Validar duplicados al cambiar nombre
-            statement = select(Producto).where(
-                Producto.nombre.ilike(producto_in.nombre.strip()),
-                Producto.id != producto_id
-            )
-            duplicado = session.exec(statement).first()
-            if duplicado:
+    @staticmethod
+    def _validar_categorias(session: Session, categoria_ids: list[int]) -> list[int]:
+        ids_unicos = list(dict.fromkeys(categoria_ids))
+        for cat_id in ids_unicos:
+            cat = session.get(Categoria, cat_id)
+            if not cat or cat.deleted_at is not None:
                 raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail=f"El nombre '{producto_in.nombre}' ya pertenece a otro producto"
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"La categoría con ID {cat_id} no existe",
                 )
-            db_prod.nombre = producto_in.nombre.strip()
+        return ids_unicos
 
-        if producto_in.descripcion is not None:
-            db_prod.descripcion = producto_in.descripcion.strip()
-        if producto_in.precio_base is not None:
-            db_prod.precio_base = producto_in.precio_base.strip()
-        if producto_in.imagen_url is not None:
-            db_prod.imagen_url_raw = json.dumps(producto_in.imagen_url)
-        if producto_in.disponible is not None:
-            db_prod.disponible = producto_in.disponible
+    @staticmethod
+    def _normalizar_y_validar_ingredientes(
+        session: Session,
+        ingredientes: list[Union[int, ProductoIngredienteInput]],
+    ) -> list[tuple[int, float]]:
+        resultado: dict[int, float] = {}
+        for item in ingredientes:
+            if isinstance(item, int):
+                ing_id, cant = item, 1.0
+            else:
+                ing_id, cant = item.ingrediente_id, item.cantidad
 
-        session.add(db_prod)
+            ing = session.get(Ingrediente, ing_id)
+            if not ing or ing.deleted_at is not None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"El ingrediente con ID {ing_id} no existe",
+                )
+            resultado[ing_id] = cant
+        return list(resultado.items())
+
+    @staticmethod
+    def get_all(
+        session: Session,
+        offset: int = 0,
+        limit: int = 10,
+        nombre: Optional[str] = None,
+        incluir_inactivos: bool = False,
+    ) -> ProductoPaginatedResponse:
+        query = select(Producto)
+        if not incluir_inactivos:
+            query = query.where(Producto.deleted_at.is_(None))
+        if nombre:
+            query = query.where(func.lower(Producto.nombre).contains(nombre.strip().lower()))
+
+        todos = session.exec(query.order_by(Producto.id)).all()
+        total = len(todos)
+        paginados = todos[offset : offset + limit]
+        items = [ProductoService._to_read(session, p) for p in paginados]
+        return ProductoPaginatedResponse(
+            total=total,
+            offset=offset,
+            limit=limit,
+            items=items,
+        )
+
+    @staticmethod
+    def get_by_id(session: Session, producto_id: int) -> ProductoRead:
+        producto = session.get(Producto, producto_id)
+        if not producto or producto.deleted_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"El producto con ID {producto_id} no existe",
+            )
+        return ProductoService._to_read(session, producto)
+
+    @staticmethod
+    def create(session: Session, data: ProductoCreate) -> ProductoRead:
+        cat_ids = ProductoService._validar_categorias(session, data.categoria_ids)
+        ing_validados = (
+            ProductoService._normalizar_y_validar_ingredientes(session, data.ingredientes)
+            if data.ingredientes
+            else []
+        )
+
+        nuevo = Producto(
+            nombre=data.nombre,
+            descripcion=data.descripcion,
+            precio_base=data.precio_base,
+            imagenes_url=json.dumps(data.imagenes_url),
+            disponible=data.disponible,
+        )
+        session.add(nuevo)
         session.commit()
-        session.refresh(db_prod)
-        return cls._to_response(db_prod)
+        session.refresh(nuevo)
+
+        for idx, cat_id in enumerate(cat_ids):
+            session.add(
+                ProductoCategoria(
+                    producto_id=nuevo.id,
+                    categoria_id=cat_id,
+                    es_principal=(idx == 0),
+                )
+            )
+
+        for ing_id, cant in ing_validados:
+            session.add(
+                ProductoIngrediente(
+                    producto_id=nuevo.id,
+                    ingrediente_id=ing_id,
+                    cantidad=cant,
+                )
+            )
+
+        session.commit()
+        return ProductoService._to_read(session, nuevo)
+
+    @staticmethod
+    def update(session: Session, producto_id: int, data: ProductoUpdate) -> ProductoRead:
+        producto = session.get(Producto, producto_id)
+        if not producto or producto.deleted_at is not None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"El producto con ID {producto_id} no existe",
+            )
+
+        cat_ids = (
+            ProductoService._validar_categorias(session, data.categoria_ids)
+            if data.categoria_ids is not None
+            else None
+        )
+        ing_validados = (
+            ProductoService._normalizar_y_validar_ingredientes(session, data.ingredientes)
+            if data.ingredientes is not None
+            else None
+        )
+
+        producto.nombre = data.nombre
+        producto.descripcion = data.descripcion
+        producto.precio_base = data.precio_base
+        producto.imagenes_url = json.dumps(data.imagenes_url)
+        producto.disponible = data.disponible
+        producto.updated_at = datetime.now(timezone.utc)
+        session.add(producto)
+
+        # RN-12: Reemplazar todas las categorías si se enviaron en el PUT
+        if cat_ids is not None:
+            actuales = session.exec(
+                select(ProductoCategoria).where(ProductoCategoria.producto_id == producto_id)
+            ).all()
+            for rel in actuales:
+                session.delete(rel)
+            session.flush()
+            for idx, cat_id in enumerate(cat_ids):
+                session.add(
+                    ProductoCategoria(
+                        producto_id=producto_id,
+                        categoria_id=cat_id,
+                        es_principal=(idx == 0),
+                    )
+                )
+
+        # RN-21: Reemplazar todos los ingredientes si se enviaron en el PUT
+        if ing_validados is not None:
+            ing_actuales = session.exec(
+                select(ProductoIngrediente).where(ProductoIngrediente.producto_id == producto_id)
+            ).all()
+            for rel in ing_actuales:
+                session.delete(rel)
+            session.flush()
+            for ing_id, cant in ing_validados:
+                session.add(
+                    ProductoIngrediente(
+                        producto_id=producto_id,
+                        ingrediente_id=ing_id,
+                        cantidad=cant,
+                    )
+                )
+
+        session.commit()
+        session.refresh(producto)
+        return ProductoService._to_read(session, producto)
 
     @staticmethod
     def delete(session: Session, producto_id: int) -> None:
-        db_prod = session.get(Producto, producto_id)
-        if not db_prod:
+        producto = session.get(Producto, producto_id)
+        if not producto or producto.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Producto con id {producto_id} no encontrado"
+                detail=f"El producto con ID {producto_id} no existe",
             )
-        # Eliminar también asociaciones en la tabla intermedia
-        statement = select(ProductoCategoria).where(ProductoCategoria.producto_id == producto_id)
-        relaciones = session.exec(statement).all()
-        for rel in relaciones:
+
+        # RN-14: Borrado en cascada de las relaciones del producto
+        rel_cats = session.exec(
+            select(ProductoCategoria).where(ProductoCategoria.producto_id == producto_id)
+        ).all()
+        for rel in rel_cats:
             session.delete(rel)
 
-        session.delete(db_prod)
+        rel_ings = session.exec(
+            select(ProductoIngrediente).where(ProductoIngrediente.producto_id == producto_id)
+        ).all()
+        for rel in rel_ings:
+            session.delete(rel)
+
+        # Borrado lógico del producto
+        producto.deleted_at = datetime.now(timezone.utc)
+        producto.updated_at = datetime.now(timezone.utc)
+        session.add(producto)
         session.commit()
 
     @staticmethod
-    def asociar_categoria(session: Session, producto_id: int, categoria_id: int) -> None:
-        prod = session.get(Producto, producto_id)
-        if not prod:
+    def get_categorias(session: Session, producto_id: int) -> list[CategoriaRead]:
+        producto = session.get(Producto, producto_id)
+        if not producto or producto.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Producto con id {producto_id} no encontrado"
-            )
-        cat = session.get(Categoria, categoria_id)
-        if not cat:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Categoría con id {categoria_id} no encontrada"
+                detail=f"El producto con ID {producto_id} no existe",
             )
 
-        link = session.get(ProductoCategoria, (producto_id, categoria_id))
-        if link:
-            return  # Ya existe la asociación
+        enlaces = session.exec(
+            select(ProductoCategoria).where(ProductoCategoria.producto_id == producto_id)
+        ).all()
 
-        nuevo_link = ProductoCategoria(producto_id=producto_id, categoria_id=categoria_id)
-        session.add(nuevo_link)
-        session.commit()
+        categorias: list[CategoriaRead] = []
+        for enlace in enlaces:
+            cat = session.get(Categoria, enlace.categoria_id)
+            if cat and cat.deleted_at is None:
+                categorias.append(CategoriaRead.model_validate(cat))
+        return categorias
 
     @staticmethod
-    def desasociar_categoria(session: Session, producto_id: int, categoria_id: int) -> None:
-        link = session.get(ProductoCategoria, (producto_id, categoria_id))
-        if not link:
+    def get_ingredientes(session: Session, producto_id: int) -> list[dict]:
+        producto = session.get(Producto, producto_id)
+        if not producto or producto.deleted_at is not None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"No existe relación entre Producto {producto_id} y Categoría {categoria_id}"
+                detail=f"El producto con ID {producto_id} no existe",
             )
-        session.delete(link)
-        session.commit()
 
-    @staticmethod
-    def get_categorias_de_producto(session: Session, producto_id: int) -> List[Categoria]:
-        prod = session.get(Producto, producto_id)
-        if not prod:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Producto con id {producto_id} no encontrado"
-            )
-        statement = (
-            select(Categoria)
-            .join(ProductoCategoria, Categoria.id == ProductoCategoria.categoria_id)
-            .where(ProductoCategoria.producto_id == producto_id)
-        )
-        return session.exec(statement).all()
+        enlaces = session.exec(
+            select(ProductoIngrediente).where(ProductoIngrediente.producto_id == producto_id)
+        ).all()
+
+        resultado = []
+        for enlace in enlaces:
+            ing = session.get(Ingrediente, enlace.ingrediente_id)
+            if ing and ing.deleted_at is None:
+                resultado.append(
+                    {
+                        "id": ing.id,
+                        "nombre": ing.nombre,
+                        "descripcion": ing.descripcion,
+                        "unidad_medida_id": ing.unidad_medida_id,
+                        "cantidad": enlace.cantidad,
+                    }
+                )
+        return resultado
