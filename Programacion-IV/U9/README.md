@@ -1,145 +1,228 @@
-# Unidad 9 — FoodStore: autenticación y estado global
+# Trabajo Práctico — Unidad 9
+## Programación IV · FoodStore
 
-La aplicación amplía la Unidad 8 con autenticación por cookie HttpOnly, roles y estado global. Se conserva SQLite y el CRUD de ingredientes. La copia inicial completa de U8 quedó registrada en un commit independiente; los cambios posteriores se limitan a U9.
+**Alumna:** Macarena Marinoni
 
-## Alcance y decisiones
+Este trabajo continúa el proyecto de la Unidad 8 e incorpora registro de usuarios, inicio y cierre de sesión, permisos por rol y protección de rutas.
 
-Se aplica `TP_Unidad9_v2.pdf`: login en `/api/v1/auth/token`, identificación por email, roles muchos a muchos y bajas mediante `deleted_at`. El frontend nunca lee ni almacena el JWT.
+Se mantiene SQLite como base de datos y se conservan las funcionalidades de categorías, productos, ingredientes y pedidos. Las siguientes instrucciones permiten preparar el proyecto y comprobar su funcionamiento.
 
-- SQLite utiliza `backend/foodstore_u9.db`, independiente de U8. Se crea una base nueva para evitar migraciones innecesarias de datos de práctica.
-- Ingredientes y unidades de medida se conservan. Ingredientes requiere sesión para leer y rol admin para escribir.
-- Pedidos ya existía en U8: se incorpora el usuario de la sesión, los seis estados del UML, FormaPago, auditoría, valores monetarios de la compra e historial de estados. Los detalles no se modifican ni se borran y el historial solo recibe inserciones.
-- No se agrega el módulo DireccionEntrega ni personalizaciones del pedido: no estaban implementados en U8 y la consigna condiciona su protección a su existencia. No se implementa stock.
-- El catálogo inicial de pagos incluye EFECTIVO; el UML no impone un listado de formas de pago. Roles, formas de pago y estados son catálogos de solo lectura.
-- Las rutas antiguas del frontend `/categorias` y `/productos` redirigen a `/categories` y `/products`.
-- Los roles se consultan en la base en cada petición: un rol vencido no autoriza operaciones aunque la cookie todavía sea válida.
+## 1. Requisitos
 
-## 1. Sincronizar en VS Code (Windows)
+Para ejecutar el proyecto se necesita:
 
-Abrir el repositorio en VS Code y usar Terminal → Nueva terminal. En PowerShell:
+- Python 3.11, 3.12 o 3.13.
+- Node.js 22.12 o una versión posterior compatible con Vite 8.
+- pnpm.
+- Visual Studio Code, o un editor con acceso a una terminal.
 
-```powershell
-cd C:\Users\marin\GitHub\TUPaD_C42026
-git status
-git pull --ff-only origin main
-cd Programacion-IV\U9
-```
+Los comandos de esta guía están preparados para Windows con PowerShell.
 
-Si `git status` muestra cambios propios, no descartarlos ni usar `reset --hard`; revisarlos antes de actualizar.
+No es necesario instalar un servidor de base de datos. El archivo de SQLite se crea al iniciar el backend.
 
-## 2. Preparar el backend
+## 2. Abrir el proyecto
 
-Se requiere Python 3.11, 3.12 o 3.13. Desde U9:
+Si se recibe la entrega en archivos ZIP, descomprimir ambos proyectos. Las carpetas `backend` y `frontend` deben quedar accesibles desde el editor.
+
+Abrir la carpeta que contiene ambos proyectos en Visual Studio Code y seleccionar **Terminal → Nueva terminal**.
+
+El backend y el frontend se ejecutan en terminales separadas. Ambas deben permanecer abiertas mientras se utiliza la aplicación.
+
+## 3. Configurar y ejecutar el backend
+
+Desde la carpeta principal del proyecto, ingresar al backend:
 
 ```powershell
 cd backend
-python --version
+```
+
+Crear el entorno virtual e instalar las dependencias:
+
+```powershell
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Estos comandos utilizan directamente el Python del entorno virtual, por lo que no hace falta activarlo.
+
+### Configurar las variables de entorno
+
+Crear el archivo `.env` a partir de la plantilla incluida:
+
+```powershell
 Copy-Item .env.example .env
+```
+
+Generar una clave para firmar los tokens:
+
+```powershell
 .\.venv\Scripts\python.exe -c "import secrets; print(secrets.token_urlsafe(48))"
-code .env
 ```
 
-Copiar la clave generada en `SECRET_KEY` y completar `ADMIN_EMAIL` y `ADMIN_PASSWORD` para crear el primer administrador. La contraseña requiere al menos 8 caracteres y no más de 72 bytes UTF-8. Usar una contraseña propia. No cambiar `DATABASE_URL` para esta práctica.
+Abrir `.env` en el editor y completar los valores:
 
-```dotenv
-DATABASE_URL=sqlite:///foodstore_u9.db
-SECRET_KEY=REEMPLAZAR_POR_LA_CLAVE_GENERADA
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-COOKIE_SECURE=false
-ADMIN_EMAIL=admin@example.com
-ADMIN_PASSWORD=REEMPLAZAR_POR_UNA_CONTRASENA_PROPIA
-```
+| Variable | Configuración |
+|---|---|
+| `DATABASE_URL` | Mantener `sqlite:///foodstore_u9.db`. |
+| `SECRET_KEY` | Reemplazar el marcador por la clave generada. |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Mantener `30`. |
+| `COOKIE_SECURE` | Mantener `false` para la ejecución local por HTTP. |
+| `ADMIN_EMAIL` | Ingresar el email que se utilizará para la cuenta administradora. |
+| `ADMIN_PASSWORD` | Ingresar una contraseña propia de al menos 8 caracteres y hasta 72 bytes UTF-8. |
 
-El seed es idempotente: no duplica los catálogos ni cambia contraseñas existentes. El alta pública siempre asigna `user`; el primer admin se crea desde la configuración. No se promueven usuarios existentes mediante el seed.
+Guardar el archivo antes de continuar.
+
+La cuenta administradora se crea con estos datos. Para iniciar sesión en el frontend se deben utilizar el mismo email y la misma contraseña.
+
+El archivo `.env` no se incluye en la entrega porque contiene información privada.
+
+### Cargar los datos iniciales
+
+Ejecutar:
 
 ```powershell
 .\.venv\Scripts\python.exe -m app.seed
+```
+
+Este paso crea las tablas y carga los datos iniciales del catálogo, los roles, los estados de pedido, la forma de pago y la cuenta administradora configurada.
+
+El comando puede ejecutarse nuevamente sin duplicar los datos iniciales. Si una cuenta ya existe, no se modifica su contraseña ni su rol desde este proceso.
+
+### Iniciar el servidor
+
+```powershell
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-El uso de la ruta al ejecutable evita depender de la política de activación de PowerShell. Mantener esta terminal abierta. Swagger: http://localhost:8000/docs
+Dejar esta terminal ejecutándose.
 
-## 3. Preparar el frontend
+Para comprobar el backend:
 
-Abrir otra terminal integrada de VS Code. Se requiere Node 22.12 o posterior compatible con Vite 8, y pnpm.
+- Documentación de la API: http://localhost:8000/docs
+- Estado del servicio: http://localhost:8000/health
+
+La dirección `http://localhost:8000/` no tiene una página configurada. Para verificar el funcionamiento se deben utilizar las direcciones anteriores.
+
+## 4. Configurar y ejecutar el frontend
+
+Abrir una segunda terminal en Visual Studio Code, sin detener el backend.
+
+Desde la carpeta principal del proyecto, ingresar al frontend:
 
 ```powershell
-cd C:\Users\marin\GitHub\TUPaD_C42026\Programacion-IV\U9\frontend
-node --version
-pnpm --version
+cd frontend
+```
+
+Instalar las dependencias:
+
+```powershell
 pnpm install --frozen-lockfile
+```
+
+Iniciar la aplicación:
+
+```powershell
 pnpm dev --port 5173 --strictPort
 ```
 
-Abrir http://localhost:5173 y usar el administrador configurado en `.env`. Usar `localhost` tanto en frontend como backend; no mezclarlo con `127.0.0.1`. La URL de API predeterminada es `http://localhost:8000/api/v1`. Si se necesita cambiarla, copiar `frontend/.env.example` como `.env` y reiniciar Vite.
+Abrir en el navegador:
 
-Registrar otra cuenta desde la pantalla de registro permite probar el rol user.
+http://localhost:5173
 
-## 4. Verificación
+La aplicación utiliza por defecto la API disponible en `http://localhost:8000/api/v1`. Para esta configuración no es necesario crear un archivo `.env` en el frontend.
 
-Backend, desde su carpeta:
+Utilizar `localhost` en ambos proyectos para evitar problemas con el envío de la cookie de sesión.
+
+## 5. Ingresar y comprobar los permisos
+
+La aplicación cuenta con dos roles:
+
+| Rol | Funciones |
+|---|---|
+| `admin` | Consultar y modificar el catálogo, y activar o desactivar usuarios. |
+| `user` | Consultar categorías, productos e ingredientes, sin permisos para modificar el catálogo. |
+
+### Cuenta administradora
+
+Ingresar desde el login con el email y la contraseña definidos en `backend/.env`.
+
+Para comprobar sus funciones:
+
+1. Crear una categoría de prueba.
+2. Editar su descripción.
+3. Eliminarla, siempre que no tenga productos activos asociados.
+4. Consultar, crear y editar productos.
+5. Verificar la selección de categorías de un producto.
+6. Consultar el listado de ingredientes.
+7. Ingresar a la sección **Usuarios**.
+8. Recargar la página y comprobar que la sesión se mantiene.
+
+En los formularios de productos, la primera categoría seleccionada se toma como principal.
+
+### Cuenta de usuario común
+
+Cerrar la sesión del administrador y seleccionar **Registrate**.
+
+Completar el formulario con un email diferente e iniciar sesión con la nueva cuenta. El registro público asigna automáticamente el rol `user`.
+
+Comprobar que:
+
+- Se pueden consultar categorías, productos e ingredientes.
+- No aparecen botones para crear, editar o eliminar.
+- Al ingresar a `http://localhost:5173/admin/users`, se muestra la página de acceso denegado.
+- La sesión se mantiene al recargar.
+- Al cerrar sesión, la aplicación vuelve al login.
+
+### Activación y desactivación de usuarios
+
+Para verificar esta función:
+
+1. Ingresar como administrador.
+2. Abrir **Usuarios** y desactivar la cuenta de prueba.
+3. Cerrar sesión.
+4. Intentar ingresar con la cuenta desactivada.
+
+La aplicación debe mostrar el mensaje **“Cuenta de usuario desactivada”**.
+
+Luego se puede volver a ingresar como administrador y activar la cuenta.
+
+## 6. Comprobar el módulo de pedidos
+
+El módulo de pedidos se conserva en el backend. Sus operaciones pueden consultarse desde Swagger o mediante el archivo `backend/pedidos.http`.
+
+Para utilizar el archivo `.http` se necesita la extensión **REST Client** de Visual Studio Code. Primero se debe iniciar sesión con la solicitud incluida en `backend/test_api.http`, completando las credenciales de prueba.
+
+Las reglas principales son:
+
+- Los usuarios con rol `user` o `admin` pueden crear pedidos.
+- El usuario del pedido se obtiene de la sesión, no del cuerpo de la solicitud.
+- Solo el administrador puede cambiar estados o realizar una baja.
+- Los estados y las formas de pago son catálogos de solo lectura.
+- El borrado de pedidos es lógico: se conservan sus detalles y su historial.
+
+## 7. Ejecutar las pruebas
+
+Para ejecutar las pruebas del backend, abrir una terminal adicional dentro de `backend`:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Las pruebas usan SQLite en memoria y no modifican la base de práctica. Cubren registro y validaciones, bcrypt, cookie HttpOnly, rechazo de Authorization, JWT inválido/vencido, roles vencidos, bloqueo de usuarios, baja lógica, permisos de escritura, catálogos de lectura, pedidos y rollback de transacciones.
+Las pruebas utilizan SQLite en memoria y no modifican los datos guardados en la base de la aplicación.
 
-Frontend, desde su carpeta:
+Para comprobar la compilación y revisar el código del frontend, ejecutar desde `frontend`:
 
 ```powershell
 pnpm build
 pnpm lint
 ```
 
-Comprobación en navegador:
+## 8. Consideraciones sobre la entrega
 
-1. Abrir `/products` sin sesión: redirige a `/login`.
-2. Registrar una cuenta y entrar con ella: redirige a `/categories`.
-3. Recargar: se verifica `/auth/me` y se conserva la sesión.
-4. Como user, comprobar categorías, productos e ingredientes sin botones de escritura; `/admin/users` muestra acceso denegado.
-5. Como admin, crear/editar/eliminar y activar/desactivar cuentas.
-6. En productos, comprobar las categorías y su selección en el formulario (la primera es la principal).
-7. Cerrar sesión y comprobar que no se puede volver a las páginas protegidas.
-8. Borrar la cookie desde las herramientas del navegador y solicitar un listado: el 401 limpia la sesión y redirige al login.
-
-## 5. Preparar entrega
-
-Desde U9, después de confirmar los cambios en Git:
-
-```powershell
-python preparar_entrega.py
-```
-
-Se generan `entrega/U9_backend_Marinoni.zip` y `entrega/U9_frontend_Marinoni.zip`. El script incluye solo archivos versionados y excluye entornos, dependencias, builds, cachés, bases de datos y archivos `.env`; conserva `.env.example`. No elimina archivos de trabajo.
-
-## Estructura incorporada
-
-| Ubicación | Responsabilidad |
-|---|---|
-| `backend/app/core/config.py`, `security.py`, `deps.py` | Configuración, hash/JWT y autorización |
-| `backend/app/modules/usuarios/` | Modelos, esquemas, repositorio, servicio y rutas |
-| `backend/app/pedidos/` | Pedidos autenticados y registros históricos |
-| `backend/tests/` | Pruebas de API aisladas |
-| `frontend/src/api/` | Axios y caché de consultas |
-| `frontend/src/store/authStore.ts` | Login, logout y verificación de sesión; persiste solo usuario |
-| `frontend/src/components/ProtectedRoute.tsx` | Protección por sesión y roles |
-| `frontend/src/pages/` | Pantallas originales y acceso/registro/administración |
-
-## Correspondencia con la consigna
-
-| Requisito | Implementación |
-|---|---|
-| HU-01 Registro | UserCreate, UsuarioService, RegisterPage |
-| HU-02 Login | OAuth2 (username contiene email), cookie HttpOnly, LoginPage |
-| HU-03 Logout | Borrado de cookie, limpieza de store y caché |
-| HU-04 Recarga/perfil | checkSession, /auth/me, Navbar |
-| HU-05 Roles | require_role sobre UsuarioRol vigente y controles de escritura |
-| HU-06 Rutas | ProtectedRoute, /unauthorized, /admin/users |
-| HU-07 Axios | withCredentials e interceptor 401 sin leer tokens |
-| Bajas lógicas | Categoría, producto, ingrediente, pedido y activación de usuario |
-| Pedidos existentes | Usuario desde sesión, estados/catálogos e historial |
-
-El logout elimina la cookie del navegador. Como en la referencia, un JWT copiado fuera del navegador no se revoca y vence según `ACCESS_TOKEN_EXPIRE_MINUTES`.
+- La base de U9 se guarda en `backend/foodstore_u9.db`.
+- Se mantienen ingredientes y unidades de medida por tratarse de una continuación del proyecto anterior.
+- No se incorporan stock ni un módulo nuevo de direcciones de entrega.
+- Las contraseñas se almacenan con hash bcrypt.
+- El JWT se envía mediante una cookie HttpOnly. El frontend no lo lee ni lo guarda.
+- Las bajas de las entidades principales son lógicas, mediante `deleted_at`.
+- Los archivos `.env`, las bases locales, `node_modules` y `.venv` no forman parte de la entrega.
