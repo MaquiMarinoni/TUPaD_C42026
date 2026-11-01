@@ -9,6 +9,7 @@ export interface Producto {
 }
 
 export interface ProductoFormData {
+  categoria_ids: number[];
   nombre: string;
   descripcion: string;
   precio_base: number;

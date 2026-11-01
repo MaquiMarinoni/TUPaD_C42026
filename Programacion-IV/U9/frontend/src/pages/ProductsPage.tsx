@@ -1,4 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import type { Categoria } from '../types/categoria';
+import { axiosInstance, listAll } from '../api/axiosInstance';
+import { useAuthStore } from '../store/authStore';
+import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
 import {
@@ -27,68 +30,23 @@ import {
 import type { Producto, ProductoFormData } from '../types/producto';
 import { AlertBanner, EmptyState, ErrorState, LoadingState } from '../components/StatusStates';
 
-const API_URL = 'http://localhost:8000/productos';
-
-async function parseApiError(res: Response, fallback: string): Promise<string> {
-  const errData = await res.json().catch(() => null);
-  if (errData && typeof errData.detail === 'string') {
-    return errData.detail;
-  }
-  if (errData && Array.isArray(errData.detail)) {
-    return errData.detail.map((item: { msg?: string }) => item.msg || '').filter(Boolean).join(', ') || fallback;
-  }
-  return fallback;
-}
-
 async function fetchProductos(): Promise<Producto[]> {
-  const res = await fetch(`${API_URL}?limit=100`);
-  if (!res.ok) {
-    const msg = await parseApiError(res, 'Error al obtener los productos');
-    throw new Error(msg);
-  }
-  const data = await res.json();
-  return Array.isArray(data) ? data : data.items ?? [];
+  return listAll<Producto>('/productos/');
 }
-
 async function createProducto(payload: ProductoFormData): Promise<Producto> {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const msg = await parseApiError(res, 'No se pudo crear el producto');
-    throw new Error(msg);
-  }
-  return res.json();
+  return (await axiosInstance.post<Producto>('/productos/', payload)).data;
 }
-
 async function updateProducto({ id, payload }: { id: number; payload: ProductoFormData }): Promise<Producto> {
-  const res = await fetch(`${API_URL}/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const msg = await parseApiError(res, 'No se pudo actualizar el producto');
-    throw new Error(msg);
-  }
-  return res.json();
+  return (await axiosInstance.put<Producto>(`/productos/${id}`, payload)).data;
 }
-
 async function deleteProducto(id: number): Promise<void> {
-  const res = await fetch(`${API_URL}/${id}`, {
-    method: 'DELETE',
-  });
-  if (!res.ok) {
-    const msg = await parseApiError(res, 'No se pudo eliminar el producto');
-    throw new Error(msg);
-  }
+  await axiosInstance.delete(`/productos/${id}`);
 }
 
 const columnHelper = createColumnHelper<Producto>();
 
 export const ProductsPage: React.FC = () => {
+  const isAdmin = useAuthStore((state) => state.user?.roles.includes('admin') ?? false);
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [productoToEdit, setProductoToEdit] = useState<Producto | null>(null);
@@ -107,6 +65,8 @@ export const ProductsPage: React.FC = () => {
     queryKey: ['productos'],
     queryFn: fetchProductos,
   });
+
+  const { data: categorias = [], isError: categoriesError } = useQuery({ queryKey: ['categorias'], queryFn: () => listAll<Categoria>('/categorias/') });
 
   const createMutation = useMutation({
     mutationFn: createProducto,
@@ -147,6 +107,7 @@ export const ProductsPage: React.FC = () => {
       descripcion: productoToEdit?.descripcion ?? '',
       precio_base: productoToEdit?.precio_base ?? 0,
       disponible: productoToEdit?.disponible ?? true,
+      categoria_ids: productoToEdit?.categoria_ids ?? [] as number[],
     },
     onSubmit: async ({ value }) => {
       setModalError(null);
@@ -155,6 +116,7 @@ export const ProductsPage: React.FC = () => {
         descripcion: value.descripcion.trim(),
         precio_base: Number(value.precio_base),
         disponible: Boolean(value.disponible),
+        categoria_ids: value.categoria_ids,
       };
       if (productoToEdit) {
         await updateMutation.mutateAsync({ id: productoToEdit.id, payload });
@@ -172,6 +134,7 @@ export const ProductsPage: React.FC = () => {
     form.setFieldValue('descripcion', '');
     form.setFieldValue('precio_base', 0);
     form.setFieldValue('disponible', true);
+    form.setFieldValue('categoria_ids', []);
     setIsModalOpen(true);
   };
 
@@ -183,6 +146,7 @@ export const ProductsPage: React.FC = () => {
     form.setFieldValue('descripcion', producto.descripcion ?? '');
     form.setFieldValue('precio_base', producto.precio_base);
     form.setFieldValue('disponible', producto.disponible);
+    form.setFieldValue('categoria_ids', producto.categoria_ids ?? []);
     setIsModalOpen(true);
   };
 
@@ -199,8 +163,7 @@ export const ProductsPage: React.FC = () => {
     }
   };
 
-  const columns = useMemo(
-    () => [
+  const columns = [
       columnHelper.accessor('id', {
         header: 'ID',
         cell: (info) => <span className="font-mono text-xs text-slate-500">#{info.getValue()}</span>,
@@ -217,6 +180,7 @@ export const ProductsPage: React.FC = () => {
           </span>
         ),
       }),
+      columnHelper.display({ id: 'categorias', header: 'Categorías', cell: ({ row }) => (row.original.categoria_ids ?? []).map((id) => categorias.find((c) => c.id === id)?.nombre ?? `#${id}`).join(', ') || 'Sin categorías' }),
       columnHelper.accessor('precio_base', {
         header: 'Precio Base',
         cell: (info) => (
@@ -263,14 +227,15 @@ export const ProductsPage: React.FC = () => {
           </div>
         ),
       }),
-    ],
-    []
-  );
+  ];
 
+  // TanStack Table administra su estado; esta llamada no se memoiza.
+  // oxlint-disable-next-line react/incompatible-library
   const table = useReactTable({
     data: productos,
     columns,
     state: {
+      columnVisibility: { acciones: isAdmin },
       sorting,
       globalFilter,
     },
@@ -296,14 +261,14 @@ export const ProductsPage: React.FC = () => {
             Administrá los productos del catálogo, sus precios y su disponibilidad.
           </p>
         </div>
-        <button
+        {isAdmin && (<button
           type="button"
           onClick={handleOpenCreate}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
           Nuevo producto
-        </button>
+        </button>)}
       </div>
 
       <AlertBanner message={pageAlert} onClose={() => setPageAlert(null)} />
@@ -317,7 +282,7 @@ export const ProductsPage: React.FC = () => {
           title="No hay productos registrados"
           description="Agregá el primer producto al catálogo."
           actionLabel="Nuevo producto"
-          onAction={handleOpenCreate}
+          onAction={isAdmin ? handleOpenCreate : undefined}
         />
       ) : (
         <div className="space-y-4">
@@ -421,7 +386,7 @@ export const ProductsPage: React.FC = () => {
         </div>
       )}
 
-      {isModalOpen && (
+      {isAdmin && isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
           <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
@@ -541,6 +506,17 @@ export const ProductsPage: React.FC = () => {
                       )}
                     </div>
                   )}
+                </form.Field>
+
+                <form.Field name="categoria_ids">
+                  {(field) => <fieldset className="rounded-lg border p-3"><legend className="text-sm font-medium">Categorías</legend>
+                    <p className="mb-2 text-xs text-slate-500">La primera seleccionada será la principal.</p>
+                    {categoriesError && <p role="alert" className="text-sm text-red-700">No se pudieron cargar las categorías. Reintentá desde el listado.</p>}
+                    {categorias.map((categoria) => <label key={categoria.id} className="mr-3 inline-flex items-center gap-2 text-sm">
+                      <input type="checkbox" checked={field.state.value.includes(categoria.id)} onChange={(event) => field.handleChange(event.target.checked ? [...field.state.value, categoria.id] : field.state.value.filter((id) => id !== categoria.id))} />
+                      {categoria.nombre}{field.state.value[0] === categoria.id ? ' (principal)' : ''}
+                    </label>)}
+                  </fieldset>}
                 </form.Field>
 
                 <form.Field name="disponible">

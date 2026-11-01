@@ -1,42 +1,35 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { Layers, Package, UtensilsCrossed, Store } from 'lucide-react';
+import { useState } from 'react';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 
-export const Navbar: React.FC = () => {
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
-      isActive
-        ? 'bg-indigo-600 text-white shadow-xs'
-        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-    }`;
-
-  return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-xs">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6">
-        <NavLink to="/categorias" className="flex items-center gap-2.5 text-slate-900 font-bold text-lg">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
-            <Store className="h-5 w-5" />
-          </div>
-          <span>FoodStore Admin</span>
-        </NavLink>
-
-        <nav className="flex items-center gap-1.5">
-          <NavLink to="/categorias" className={linkClass}>
-            <Layers className="h-4 w-4" />
-            <span>Categorías</span>
-          </NavLink>
-          <NavLink to="/productos" className={linkClass}>
-            <Package className="h-4 w-4" />
-            <span>Productos</span>
-          </NavLink>
-          <NavLink to="/ingredientes" className={linkClass}>
-            <UtensilsCrossed className="h-4 w-4" />
-            <span>Ingredientes</span>
-          </NavLink>
-        </nav>
-      </div>
-    </header>
-  );
-};
-
-export default Navbar;
+export function Navbar() {
+  const { user, logout } = useAuthStore();
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const navigate = useNavigate();
+  async function closeSession() {
+    setBusy(true); setError('');
+    try { await logout(); navigate('/login', { replace: true }); }
+    catch (err) { setError(err instanceof Error ? err.message : 'No se pudo cerrar la sesión.'); }
+    finally { setBusy(false); }
+  }
+  const linkClass = ({ isActive }: { isActive: boolean }) => `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-600 hover:bg-slate-100'}`;
+  return <header className="border-b border-slate-200 bg-white">
+    <nav aria-label="Navegación principal" className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-4">
+      <Link to={user ? '/categories' : '/login'} className="text-lg font-bold text-slate-900">FoodStore</Link>
+      {user ? <>
+        <div className="flex flex-wrap gap-1">
+          <NavLink to="/categories" className={linkClass}>Categorías</NavLink>
+          <NavLink to="/products" className={linkClass}>Productos</NavLink>
+          <NavLink to="/ingredientes" className={linkClass}>Ingredientes</NavLink>
+          {user.roles.includes('admin') && <NavLink to="/admin/users" className={linkClass}>Usuarios</NavLink>}
+        </div>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <div><p className="font-semibold">{user.nombre} {user.apellido}</p><p className="text-xs text-slate-500">{user.roles.join(', ') || 'Sin roles vigentes'}</p></div>
+          <button onClick={() => void closeSession()} disabled={busy} className="rounded-lg border px-3 py-2 disabled:opacity-50">{busy ? 'Cerrando...' : 'Cerrar sesión'}</button>
+        </div>
+      </> : <div className="flex gap-2"><NavLink to="/login" className={linkClass}>Ingresar</NavLink><NavLink to="/register" className={linkClass}>Registrarse</NavLink></div>}
+    </nav>
+    {error && <p role="alert" className="px-6 pb-3 text-sm text-red-700">{error}</p>}
+  </header>;
+}

@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import { axiosInstance, listAll } from '../api/axiosInstance';
+import { useAuthStore } from '../store/authStore';
+import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from '@tanstack/react-form';
 import {
@@ -16,68 +18,23 @@ import { CategoriaList } from '../components/CategoriaList';
 import { CategoriaModal } from '../components/CategoriaModal';
 import { AlertBanner, EmptyState, ErrorState, LoadingState } from '../components/StatusStates';
 
-const API_URL = 'http://localhost:8000/categorias';
-
-async function parseApiError(res: Response, fallback: string): Promise<string> {
-  const errData = await res.json().catch(() => null);
-  if (errData && typeof errData.detail === 'string') {
-    return errData.detail;
-  }
-  if (errData && Array.isArray(errData.detail)) {
-    return errData.detail.map((item: { msg?: string }) => item.msg || '').filter(Boolean).join(', ') || fallback;
-  }
-  return fallback;
-}
-
 async function fetchCategorias(): Promise<Categoria[]> {
-  const res = await fetch(`${API_URL}?limit=100`);
-  if (!res.ok) {
-    const msg = await parseApiError(res, 'Error al obtener las categorías');
-    throw new Error(msg);
-  }
-  const data = await res.json();
-  return Array.isArray(data) ? data : data.items ?? [];
+  return listAll<Categoria>('/categorias/');
 }
-
 async function createCategoria(payload: CategoriaFormData): Promise<Categoria> {
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const msg = await parseApiError(res, 'No se pudo crear la categoría');
-    throw new Error(msg);
-  }
-  return res.json();
+  return (await axiosInstance.post<Categoria>('/categorias/', payload)).data;
 }
-
 async function updateCategoria({ id, payload }: { id: number; payload: CategoriaFormData }): Promise<Categoria> {
-  const res = await fetch(`${API_URL}/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const msg = await parseApiError(res, 'No se pudo actualizar la categoría');
-    throw new Error(msg);
-  }
-  return res.json();
+  return (await axiosInstance.put<Categoria>(`/categorias/${id}`, payload)).data;
 }
-
 async function deleteCategoria(id: number): Promise<void> {
-  const res = await fetch(`${API_URL}/${id}`, {
-    method: 'DELETE',
-  });
-  if (!res.ok) {
-    const msg = await parseApiError(res, 'No se pudo eliminar la categoría');
-    throw new Error(msg);
-  }
+  await axiosInstance.delete(`/categorias/${id}`);
 }
 
 const columnHelper = createColumnHelper<Categoria>();
 
 export const CategoriasPage: React.FC = () => {
+  const isAdmin = useAuthStore((state) => state.user?.roles.includes('admin') ?? false);
   const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [categoriaToEdit, setCategoriaToEdit] = useState<Categoria | null>(null);
@@ -180,8 +137,7 @@ export const CategoriasPage: React.FC = () => {
     }
   };
 
-  const columns = useMemo(
-    () => [
+  const columns = [
       columnHelper.accessor('id', {
         header: 'ID',
         cell: (info) => <span className="font-mono text-xs text-slate-500">#{info.getValue()}</span>,
@@ -223,14 +179,15 @@ export const CategoriasPage: React.FC = () => {
           </div>
         ),
       }),
-    ],
-    []
-  );
+  ];
 
+  // TanStack Table administra su estado; esta llamada no se memoiza.
+  // oxlint-disable-next-line react/incompatible-library
   const table = useReactTable({
     data: categorias,
     columns,
     state: {
+      columnVisibility: { acciones: isAdmin },
       sorting,
       globalFilter,
     },
@@ -256,14 +213,14 @@ export const CategoriasPage: React.FC = () => {
             Administrá las categorías del catálogo con ordenamiento, filtrado y paginación.
           </p>
         </div>
-        <button
+        {isAdmin && (<button
           type="button"
           onClick={handleOpenCreate}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
           Nueva categoría
-        </button>
+        </button>)}
       </div>
 
       <AlertBanner message={pageAlert} onClose={() => setPageAlert(null)} />
@@ -277,7 +234,7 @@ export const CategoriasPage: React.FC = () => {
           title="No hay categorías registradas"
           description="Creá la primera categoría para comenzar a organizar tus productos."
           actionLabel="Nueva categoría"
-          onAction={handleOpenCreate}
+          onAction={isAdmin ? handleOpenCreate : undefined}
         />
       ) : (
         <CategoriaList
@@ -288,7 +245,7 @@ export const CategoriasPage: React.FC = () => {
       )}
 
       <CategoriaModal
-        isOpen={isModalOpen}
+        isOpen={isAdmin && isModalOpen}
         isEditing={Boolean(categoriaToEdit)}
         apiError={modalError}
         onClose={handleCloseModal}
