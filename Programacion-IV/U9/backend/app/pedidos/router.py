@@ -26,11 +26,15 @@ def crear(data: PedidoCreate, user: UserPublic = Depends(require_role(["user", "
 
 
 @router.put("/pedidos/{pedido_id}", response_model=PedidoRead)
-def actualizar(pedido_id: int, data: PedidoUpdate, user: UserPublic = Depends(require_role(["admin"]))):
+def actualizar(
+    pedido_id: int, data: PedidoUpdate, user: UserPublic = Depends(require_role(["admin"]))
+):
     return PedidoService().actualizar_estado(pedido_id, data, user.id)
 
 
-@router.delete("/pedidos/{pedido_id}", status_code=204, dependencies=[Depends(require_role(["admin"]))])
+@router.delete(
+    "/pedidos/{pedido_id}", status_code=204, dependencies=[Depends(require_role(["admin"]))]
+)
 def eliminar(pedido_id: int):
     PedidoService().eliminar(pedido_id)
 

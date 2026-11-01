@@ -30,3 +30,9 @@ No se implementan inventario, stock, direcciones de entrega ni pantallas de pedi
 1. Copia completa de U8 a U9.
 2. Autenticación, roles, pedidos y pruebas de backend.
 3. Frontend autenticado, guía de VS Code y preparación de entrega.
+
+## Revisión de legibilidad
+
+Se separaron los campos de login y registro, las consultas de usuarios y los pasos de creación de pedidos. Se reemplazaron condiciones encadenadas por variables intermedias y se ordenó el formato de los archivos de autenticación. Se conservaron los endpoints, las validaciones, los permisos y la configuración.
+
+Después de esta revisión se ejecutaron nuevamente las 18 pruebas de backend, la compilación y el análisis del frontend. También se comprobó el flujo de registro, login, recarga, roles, CRUD de categorías, administración de usuarios y logout en Chromium con una base de prueba nueva. No se generaron ZIP en esta revisión.
