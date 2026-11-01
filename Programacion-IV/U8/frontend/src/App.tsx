@@ -1,21 +1,24 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import { Navbar } from "./components/Navbar";
-import { CategoriasPage } from "./pages/CategoriasPage";
-import { ProductsPage } from "./pages/ProductsPage";
+import React from 'react';
+import { Routes, Route } from 'react-router-dom';
+import { Navbar } from './components/Navbar';
+import { CategoriasPage } from './pages/CategoriasPage';
+import { ProductsPage } from './pages/ProductsPage';
+import { IngredientesPage } from './pages/IngredientesPage';
 
-function App() {
+export const App: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900">
       <Navbar />
-      <div className="flex-1">
+      <main className="flex-1">
         <Routes>
-          <Route path="/" element={<Navigate to="/categorias" replace />} />
+          <Route path="/" element={<CategoriasPage />} />
           <Route path="/categorias" element={<CategoriasPage />} />
           <Route path="/productos" element={<ProductsPage />} />
+          <Route path="/ingredientes" element={<IngredientesPage />} />
         </Routes>
-      </div>
+      </main>
     </div>
   );
-}
+};
 
 export default App;

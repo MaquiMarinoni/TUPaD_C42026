@@ -3,8 +3,8 @@ export interface Producto {
   nombre: string;
   descripcion: string;
   precio_base: number;
-  imagenes_url: string[];
   disponible: boolean;
+  imagenes_url?: string[];
   categoria_ids?: number[];
 }
 
@@ -12,7 +12,5 @@ export interface ProductoFormData {
   nombre: string;
   descripcion: string;
   precio_base: number;
-  imagenes_url: string[];
   disponible: boolean;
-  categoria_ids: number[];
 }

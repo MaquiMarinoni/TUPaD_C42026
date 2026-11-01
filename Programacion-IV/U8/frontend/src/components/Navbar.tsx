@@ -1,55 +1,38 @@
-import { Link, useLocation } from "react-router-dom";
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { Layers, Package, UtensilsCrossed, Store } from 'lucide-react';
 
-interface NavbarProps {
-  totalCategorias?: number;
-}
-
-export const Navbar = ({ totalCategorias }: NavbarProps) => {
-  const location = useLocation();
-  const isCategorias =
-    location.pathname.startsWith("/categorias") || location.pathname === "/";
-  const isProductos = location.pathname.startsWith("/productos");
+export const Navbar: React.FC = () => {
+  const linkClass = ({ isActive }: { isActive: boolean }) =>
+    `inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+      isActive
+        ? 'bg-indigo-600 text-white shadow-xs'
+        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+    }`;
 
   return (
-    <header className="bg-indigo-600 text-white shadow-md">
-      <div className="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl font-extrabold bg-white text-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center shadow-sm">
-            FS
-          </span>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">FoodStore Admin</h1>
-            <p className="text-indigo-100 text-xs">Panel de Gestión de Catálogo</p>
+    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-xs">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6">
+        <NavLink to="/categorias" className="flex items-center gap-2.5 text-slate-900 font-bold text-lg">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-xs">
+            <Store className="h-5 w-5" />
           </div>
-        </div>
+          <span>FoodStore Admin</span>
+        </NavLink>
 
-        <nav className="flex items-center gap-2">
-          <Link
-            to="/categorias"
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isCategorias
-                ? "bg-white text-indigo-700 shadow-sm"
-                : "text-indigo-100 hover:bg-indigo-500"
-            }`}
-          >
-            Categorías
-            {typeof totalCategorias === "number" && (
-              <span className="ml-2 bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full text-xs font-bold">
-                {totalCategorias}
-              </span>
-            )}
-          </Link>
-
-          <Link
-            to="/productos"
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              isProductos
-                ? "bg-white text-indigo-700 shadow-sm"
-                : "text-indigo-100 hover:bg-indigo-500"
-            }`}
-          >
-            Productos
-          </Link>
+        <nav className="flex items-center gap-1.5">
+          <NavLink to="/categorias" className={linkClass}>
+            <Layers className="h-4 w-4" />
+            <span>Categorías</span>
+          </NavLink>
+          <NavLink to="/productos" className={linkClass}>
+            <Package className="h-4 w-4" />
+            <span>Productos</span>
+          </NavLink>
+          <NavLink to="/ingredientes" className={linkClass}>
+            <UtensilsCrossed className="h-4 w-4" />
+            <span>Ingredientes</span>
+          </NavLink>
         </nav>
       </div>
     </header>

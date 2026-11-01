@@ -1,18 +1,19 @@
 import os
-from sqlmodel import SQLModel, create_engine, Session
+from dotenv import load_dotenv
+from sqlmodel import SQLModel, Session, create_engine
 
-# Archivo de base de datos SQLite local
-DATABASE_FILE = "foodstore.db"
-DATABASE_URL = f"sqlite:///{DATABASE_FILE}"
+load_dotenv()
 
-# check_same_thread=False es necesario para SQLite con FastAPI
-engine = create_engine(DATABASE_URL, echo=False, connect_args={"check_same_thread": False})
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///foodstore.db")
 
-def create_db_and_tables():
-    """Crea las tablas en la base de datos si no existen."""
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(DATABASE_URL, echo=False, connect_args=connect_args)
+
+
+def create_db_and_tables() -> None:
     SQLModel.metadata.create_all(engine)
 
+
 def get_session():
-    """Generador de sesión para inyección de dependencias en los endpoints."""
     with Session(engine) as session:
         yield session

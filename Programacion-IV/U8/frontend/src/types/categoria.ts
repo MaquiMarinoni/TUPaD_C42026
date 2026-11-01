@@ -4,5 +4,7 @@ export interface Categoria {
   descripcion: string;
 }
 
-// Tipo para el formulario de creación (sin id, ya que lo genera el backend)
-export type CategoriaFormData = Omit<Categoria, 'id'>;
+export interface CategoriaFormData {
+  nombre: string;
+  descripcion: string;
+}

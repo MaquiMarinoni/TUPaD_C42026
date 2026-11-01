@@ -1,434 +1,599 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { Producto, ProductoFormData } from "../types/producto";
-import type { Categoria } from "../types/categoria";
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from '@tanstack/react-form';
+import {
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+  getPaginationRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type SortingState,
+} from '@tanstack/react-table';
+import {
+  AlertCircle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react';
+import type { Producto, ProductoFormData } from '../types/producto';
+import { AlertBanner, EmptyState, ErrorState, LoadingState } from '../components/StatusStates';
 
-const PRODUCTOS_URL = "http://localhost:8000/productos";
-const CATEGORIAS_URL = "http://localhost:8000/categorias";
+const API_URL = 'http://localhost:8000/productos';
 
-const fetchProductos = async (): Promise<Producto[]> => {
-  const res = await fetch(`${PRODUCTOS_URL}/?offset=0&limit=100`);
+async function parseApiError(res: Response, fallback: string): Promise<string> {
+  const errData = await res.json().catch(() => null);
+  if (errData && typeof errData.detail === 'string') {
+    return errData.detail;
+  }
+  if (errData && Array.isArray(errData.detail)) {
+    return errData.detail.map((item: { msg?: string }) => item.msg || '').filter(Boolean).join(', ') || fallback;
+  }
+  return fallback;
+}
+
+async function fetchProductos(): Promise<Producto[]> {
+  const res = await fetch(`${API_URL}?limit=100`);
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: "Error al obtener productos" }));
-    throw new Error(err.detail || "Error al obtener productos");
+    const msg = await parseApiError(res, 'Error al obtener los productos');
+    throw new Error(msg);
   }
   const data = await res.json();
-  return Array.isArray(data) ? data : data.items;
-};
+  return Array.isArray(data) ? data : data.items ?? [];
+}
 
-const fetchCategorias = async (): Promise<Categoria[]> => {
-  const res = await fetch(`${CATEGORIAS_URL}/?offset=0&limit=100`);
+async function createProducto(payload: ProductoFormData): Promise<Producto> {
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
   if (!res.ok) {
-    throw new Error("Error al obtener categorías");
+    const msg = await parseApiError(res, 'No se pudo crear el producto');
+    throw new Error(msg);
   }
-  const data = await res.json();
-  return Array.isArray(data) ? data : data.items;
-};
+  return res.json();
+}
 
-export const ProductsPage = () => {
+async function updateProducto({ id, payload }: { id: number; payload: ProductoFormData }): Promise<Producto> {
+  const res = await fetch(`${API_URL}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const msg = await parseApiError(res, 'No se pudo actualizar el producto');
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+async function deleteProducto(id: number): Promise<void> {
+  const res = await fetch(`${API_URL}/${id}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const msg = await parseApiError(res, 'No se pudo eliminar el producto');
+    throw new Error(msg);
+  }
+}
+
+const columnHelper = createColumnHelper<Producto>();
+
+export const ProductsPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [productoToEdit, setProductoToEdit] = useState<Producto | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-
-  // Estados del formulario modal de Producto
-  const [nombre, setNombre] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [precioBase, setPrecioBase] = useState("0");
-  const [imagenUrl, setImagenUrl] = useState("");
-  const [disponible, setDisponible] = useState(true);
-  const [selectedCatIds, setSelectedCatIds] = useState<number[]>([]);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [pageAlert, setPageAlert] = useState<string | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [globalFilter, setGlobalFilter] = useState<string>('');
 
   const {
     data: productos = [],
     isLoading,
     isError,
     error,
+    refetch,
   } = useQuery<Producto[], Error>({
-    queryKey: ["productos"],
+    queryKey: ['productos'],
     queryFn: fetchProductos,
   });
 
-  const { data: categorias = [] } = useQuery<Categoria[], Error>({
-    queryKey: ["categorias"],
-    queryFn: fetchCategorias,
-  });
-
-  useEffect(() => {
-    if (productoToEdit) {
-      setNombre(productoToEdit.nombre);
-      setDescripcion(productoToEdit.descripcion);
-      setPrecioBase(String(productoToEdit.precio_base));
-      setImagenUrl(productoToEdit.imagenes_url?.[0] || "");
-      setDisponible(productoToEdit.disponible);
-      setSelectedCatIds(productoToEdit.categoria_ids || []);
-    } else {
-      setNombre("");
-      setDescripcion("");
-      setPrecioBase("0");
-      setImagenUrl("");
-      setDisponible(true);
-      setSelectedCatIds(categorias[0] ? [categorias[0].id] : []);
-    }
-  }, [productoToEdit, isModalOpen, categorias]);
-
   const createMutation = useMutation({
-    mutationFn: async (data: ProductoFormData) => {
-      const res = await fetch(`${PRODUCTOS_URL}/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "Error al crear el producto" }));
-        throw new Error(
-          typeof err.detail === "string" ? err.detail : "Verificá los datos del producto (al menos 1 categoría)"
-        );
-      }
-      return res.json();
-    },
+    mutationFn: createProducto,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["productos"] });
-      setActionError(null);
-      setIsModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['productos'] });
+      handleCloseModal();
     },
-    onError: (err: Error) => setActionError(err.message),
+    onError: (err: Error) => {
+      setModalError(err.message);
+    },
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: ProductoFormData }) => {
-      const res = await fetch(`${PRODUCTOS_URL}/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "Error al actualizar el producto" }));
-        throw new Error(typeof err.detail === "string" ? err.detail : "Error al actualizar el producto");
-      }
-      return res.json();
-    },
+    mutationFn: updateProducto,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["productos"] });
-      setActionError(null);
-      setIsModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['productos'] });
+      handleCloseModal();
     },
-    onError: (err: Error) => setActionError(err.message),
+    onError: (err: Error) => {
+      setModalError(err.message);
+    },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await fetch(`${PRODUCTOS_URL}/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "Error al eliminar el producto" }));
-        throw new Error(err.detail || "Error al eliminar el producto");
-      }
-    },
+    mutationFn: deleteProducto,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["productos"] });
-      setActionError(null);
+      setPageAlert(null);
+      queryClient.invalidateQueries({ queryKey: ['productos'] });
     },
-    onError: (err: Error) => setActionError(err.message),
+    onError: (err: Error) => {
+      setPageAlert(err.message);
+    },
   });
 
-  const toggleCategoria = (catId: number) => {
-    setSelectedCatIds((prev) =>
-      prev.includes(catId) ? prev.filter((id) => id !== catId) : [...prev, catId]
-    );
+  const form = useForm({
+    defaultValues: {
+      nombre: productoToEdit?.nombre ?? '',
+      descripcion: productoToEdit?.descripcion ?? '',
+      precio_base: productoToEdit?.precio_base ?? 0,
+      disponible: productoToEdit?.disponible ?? true,
+    },
+    onSubmit: async ({ value }) => {
+      setModalError(null);
+      const payload: ProductoFormData = {
+        nombre: value.nombre.trim(),
+        descripcion: value.descripcion.trim(),
+        precio_base: Number(value.precio_base),
+        disponible: Boolean(value.disponible),
+      };
+      if (productoToEdit) {
+        await updateMutation.mutateAsync({ id: productoToEdit.id, payload });
+      } else {
+        await createMutation.mutateAsync(payload);
+      }
+    },
+  });
+
+  const handleOpenCreate = () => {
+    setProductoToEdit(null);
+    setModalError(null);
+    form.reset();
+    form.setFieldValue('nombre', '');
+    form.setFieldValue('descripcion', '');
+    form.setFieldValue('precio_base', 0);
+    form.setFieldValue('disponible', true);
+    setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nombre.trim()) return;
-    if (selectedCatIds.length === 0) {
-      setActionError("Debés seleccionar al menos una categoría para el producto (RN-19)");
-      return;
+  const handleOpenEdit = (producto: Producto) => {
+    setProductoToEdit(producto);
+    setModalError(null);
+    form.reset();
+    form.setFieldValue('nombre', producto.nombre);
+    form.setFieldValue('descripcion', producto.descripcion ?? '');
+    form.setFieldValue('precio_base', producto.precio_base);
+    form.setFieldValue('disponible', producto.disponible);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setProductoToEdit(null);
+    setModalError(null);
+    form.reset();
+  };
+
+  const handleDelete = (producto: Producto) => {
+    if (window.confirm(`¿Estás segura de que querés eliminar el producto "${producto.nombre}"?`)) {
+      deleteMutation.mutate(producto.id);
     }
-
-    const payload: ProductoFormData = {
-      nombre: nombre.trim(),
-      descripcion: descripcion.trim(),
-      precio_base: Number(precioBase) || 0,
-      imagenes_url: imagenUrl.trim() ? [imagenUrl.trim()] : [],
-      disponible,
-      categoria_ids: selectedCatIds,
-    };
-
-    if (productoToEdit) {
-      updateMutation.mutate({ id: productoToEdit.id, data: payload });
-    } else {
-      createMutation.mutate(payload);
-    }
   };
 
-  const getCategoriaNombres = (ids?: number[]) => {
-    if (!ids || ids.length === 0) return [];
-    return categorias.filter((c) => ids.includes(c.id));
-  };
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor('id', {
+        header: 'ID',
+        cell: (info) => <span className="font-mono text-xs text-slate-500">#{info.getValue()}</span>,
+      }),
+      columnHelper.accessor('nombre', {
+        header: 'Nombre',
+        cell: (info) => <span className="font-semibold text-slate-900">{info.getValue()}</span>,
+      }),
+      columnHelper.accessor('descripcion', {
+        header: 'Descripción',
+        cell: (info) => (
+          <span className="text-slate-600">
+            {info.getValue() ? info.getValue() : <em className="text-slate-400">Sin descripción</em>}
+          </span>
+        ),
+      }),
+      columnHelper.accessor('precio_base', {
+        header: 'Precio Base',
+        cell: (info) => (
+          <span className="font-semibold text-slate-900">
+            ${Number(info.getValue()).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        ),
+      }),
+      columnHelper.accessor('disponible', {
+        header: 'Estado',
+        cell: (info) =>
+          info.getValue() ? (
+            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700 border border-emerald-200">
+              Disponible
+            </span>
+          ) : (
+            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600 border border-slate-200">
+              No disponible
+            </span>
+          ),
+      }),
+      columnHelper.display({
+        id: 'acciones',
+        header: 'Acciones',
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleOpenEdit(row.original)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 transition-colors"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Editar
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDelete(row.original)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Eliminar
+            </button>
+          </div>
+        ),
+      }),
+    ],
+    []
+  );
+
+  const table = useReactTable({
+    data: productos,
+    columns,
+    state: {
+      sorting,
+      globalFilter,
+    },
+    onSortingChange: setSorting,
+    onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 5,
+      },
+    },
+  });
 
   return (
-    <main className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Catálogo de Productos</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Gestioná los productos y sus categorías asociadas ({productos.length} registrados)
+          <h1 className="text-2xl font-bold text-slate-900">Gestión de Productos</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Administrá los productos del catálogo, sus precios y su disponibilidad.
           </p>
         </div>
-
         <button
           type="button"
-          onClick={() => {
-            setActionError(null);
-            setProductoToEdit(null);
-            setIsModalOpen(true);
-          }}
-          className="inline-flex items-center justify-center px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors"
+          onClick={handleOpenCreate}
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
         >
-          + Nuevo producto
+          <Plus className="h-4 w-4" />
+          Nuevo producto
         </button>
       </div>
 
-      {actionError && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between text-red-700 text-sm">
-          <span>{actionError}</span>
-          <button
-            type="button"
-            onClick={() => setActionError(null)}
-            className="text-red-500 hover:text-red-700 font-bold ml-4"
-          >
-            &times;
-          </button>
-        </div>
-      )}
+      <AlertBanner message={pageAlert} onClose={() => setPageAlert(null)} />
 
       {isLoading ? (
-        <div className="text-center py-16 bg-white rounded-xl border border-gray-100 shadow-sm">
-          <p className="text-gray-500 text-sm font-medium">Cargando productos...</p>
-        </div>
+        <LoadingState message="Cargando productos..." />
       ) : isError ? (
-        <div className="p-6 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
-          <p className="font-semibold mb-1">Error al cargar productos:</p>
-          <code>{error?.message}</code>
-        </div>
+        <ErrorState message={error.message} onRetry={() => refetch()} />
       ) : productos.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-xl border-2 border-dashed border-gray-200 p-8 shadow-sm">
-          <h3 className="mt-3 text-base font-semibold text-gray-900">No hay productos registrados</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Comenzá agregando un producto nuevo con el botón superior.
-          </p>
-        </div>
+        <EmptyState
+          title="No hay productos registrados"
+          description="Agregá el primer producto al catálogo."
+          actionLabel="Nuevo producto"
+          onAction={handleOpenCreate}
+        />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {productos.map((prod) => {
-            const catsAsociadas = getCategoriaNombres(prod.categoria_ids);
-            return (
-              <div
-                key={prod.id}
-                className="bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between"
-              >
-                <div>
-                  {prod.imagenes_url?.[0] && (
-                    <img
-                      src={prod.imagenes_url[0]}
-                      alt={prod.nombre}
-                      className="w-full h-44 object-cover border-b border-gray-100"
-                    />
-                  )}
-                  <div className="p-5">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="text-lg font-bold text-gray-900">{prod.nombre}</h3>
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          prod.disponible
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
-                      >
-                        {prod.disponible ? "Disponible" : "Sin stock"}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-2">
-                      {prod.descripcion || "Sin descripción"}
-                    </p>
-                    <p className="text-xl font-extrabold text-indigo-600 mt-3">
-                      ${prod.precio_base.toLocaleString("es-AR")}
-                    </p>
-                    {catsAsociadas.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mt-3">
-                        {catsAsociadas.map((c) => (
-                          <span
-                            key={c.id}
-                            className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-xs font-medium"
-                          >
-                            {c.nombre}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+            <div className="relative flex-1 max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={globalFilter ?? ''}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                placeholder="Filtrar productos por nombre o descripción..."
+                className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+              />
+            </div>
+            <span className="text-xs font-medium text-slate-500">
+              Mostrando {table.getRowModel().rows.length} de {table.getFilteredRowModel().rows.length} registros
+            </span>
+          </div>
 
-                <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActionError(null);
-                      setProductoToEdit(prod);
-                      setIsModalOpen(true);
-                    }}
-                    className="px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm(`¿Eliminar el producto "${prod.nombre}"?`)) {
-                        deleteMutation.mutate(prod.id);
-                      }
-                    }}
-                    className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                  >
-                    Eliminar
-                  </button>
-                </div>
+          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => {
+                        const canSort = header.column.getCanSort();
+                        const sorted = header.column.getIsSorted();
+                        return (
+                          <th
+                            key={header.id}
+                            scope="col"
+                            onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                            className={`px-6 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-slate-600 ${
+                              canSort ? 'cursor-pointer select-none hover:bg-slate-100 transition-colors' : ''
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(header.column.columnDef.header, header.getContext())}
+                              {canSort && (
+                                <span className="text-slate-400">
+                                  {sorted === 'asc' ? (
+                                    <ArrowUp className="h-3.5 w-3.5 text-indigo-600" />
+                                  ) : sorted === 'desc' ? (
+                                    <ArrowDown className="h-3.5 w-3.5 text-indigo-600" />
+                                  ) : (
+                                    <ArrowUpDown className="h-3.5 w-3.5" />
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-slate-50/80 transition-colors">
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id} className="px-6 py-4 text-sm text-slate-700 whitespace-nowrap">
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-3">
+              <div className="text-xs font-medium text-slate-600">
+                Página <span className="font-semibold text-slate-900">{table.getState().pagination.pageIndex + 1}</span> de{' '}
+                <span className="font-semibold text-slate-900">{Math.max(1, table.getPageCount())}</span>
               </div>
-            );
-          })}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                  className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+                >
+                  Siguiente
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden border border-gray-100">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h2 className="text-lg font-bold text-gray-800">
-                {productoToEdit ? "Editar Producto" : "Nuevo Producto"}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-slate-50">
+              <h2 className="text-lg font-semibold text-slate-800">
+                {productoToEdit ? 'Editar producto' : 'Nuevo producto'}
               </h2>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600 text-2xl leading-none"
+                onClick={handleCloseModal}
+                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-200/60 hover:text-slate-600 transition-colors"
+                aria-label="Cerrar modal"
               >
-                &times;
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Nombre del producto
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Ej: Hamburguesa Doble Cheddar"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Descripción
-                </label>
-                <textarea
-                  rows={2}
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">
-                    Precio base ($)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value={precioBase}
-                    onChange={(e) => setPrecioBase(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  />
+            <div className="p-6">
+              {modalError && (
+                <div className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3.5 text-sm text-red-700">
+                  <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                  <span>{modalError}</span>
                 </div>
+              )}
 
-                <div className="flex items-end pb-2">
-                  <label className="inline-flex items-center gap-2 text-sm font-medium text-gray-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={disponible}
-                      onChange={(e) => setDisponible(e.target.checked)}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Disponible
-                  </label>
-                </div>
-              </div>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  form.handleSubmit();
+                }}
+                className="space-y-4"
+              >
+                <form.Field
+                  name="nombre"
+                  validators={{
+                    onChange: ({ value }) =>
+                      !value || !value.trim()
+                        ? 'El nombre del producto es obligatorio.'
+                        : undefined,
+                  }}
+                >
+                  {(field) => (
+                    <div>
+                      <label htmlFor={field.name} className="block text-sm font-medium text-slate-700 mb-1">
+                        Nombre <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id={field.name}
+                        name={field.name}
+                        type="text"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Ej. Pizza Napolitana"
+                        className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                      {field.state.meta.errors.length > 0 && (
+                        <p className="mt-1 text-xs font-medium text-red-600">
+                          {field.state.meta.errors.filter(Boolean).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </form.Field>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  URL de imagen (opcional)
-                </label>
-                <input
-                  type="url"
-                  value={imagenUrl}
-                  onChange={(e) => setImagenUrl(e.target.value)}
-                  placeholder="https://..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
+                <form.Field name="descripcion">
+                  {(field) => (
+                    <div>
+                      <label htmlFor={field.name} className="block text-sm font-medium text-slate-700 mb-1">
+                        Descripción
+                      </label>
+                      <textarea
+                        id={field.name}
+                        name={field.name}
+                        rows={3}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        placeholder="Descripción del producto..."
+                        className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                    </div>
+                  )}
+                </form.Field>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Categorías asociadas (mínimo 1)
-                </label>
-                <div className="flex flex-wrap gap-2 max-h-28 overflow-y-auto p-2 border border-gray-200 rounded-md">
-                  {categorias.map((cat) => {
-                    const active = selectedCatIds.includes(cat.id);
-                    return (
+                <form.Field
+                  name="precio_base"
+                  validators={{
+                    onChange: ({ value }) =>
+                      value === undefined || value === null || Number.isNaN(Number(value))
+                        ? 'Ingresá un precio válido.'
+                        : Number(value) < 0
+                        ? 'El precio base no puede ser negativo.'
+                        : undefined,
+                  }}
+                >
+                  {(field) => (
+                    <div>
+                      <label htmlFor={field.name} className="block text-sm font-medium text-slate-700 mb-1">
+                        Precio Base ($) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        id={field.name}
+                        name={field.name}
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(Number(e.target.value))}
+                        className="w-full rounded-lg border border-slate-300 px-3.5 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                      />
+                      {field.state.meta.errors.length > 0 && (
+                        <p className="mt-1 text-xs font-medium text-red-600">
+                          {field.state.meta.errors.filter(Boolean).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </form.Field>
+
+                <form.Field name="disponible">
+                  {(field) => (
+                    <div className="flex items-center gap-2.5 pt-1">
+                      <input
+                        id={field.name}
+                        name={field.name}
+                        type="checkbox"
+                        checked={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.checked)}
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <label htmlFor={field.name} className="text-sm font-medium text-slate-700">
+                        Producto disponible para la venta
+                      </label>
+                    </div>
+                  )}
+                </form.Field>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200">
+                  <button
+                    type="button"
+                    onClick={handleCloseModal}
+                    className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <form.Subscribe
+                    selector={(state) => [state.canSubmit, state.isSubmitting] as const}
+                  >
+                    {([canSubmit, isSubmitting]) => (
                       <button
-                        key={cat.id}
-                        type="button"
-                        onClick={() => toggleCategoria(cat.id)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                          active
-                            ? "bg-indigo-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
+                        type="submit"
+                        disabled={!canSubmit || isSubmitting || createMutation.isPending || updateMutation.isPending}
+                        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
                       >
-                        {cat.nombre}
+                        {isSubmitting || createMutation.isPending || updateMutation.isPending
+                          ? 'Guardando...'
+                          : productoToEdit
+                          ? 'Guardar cambios'
+                          : 'Crear producto'}
                       </button>
-                    );
-                  })}
+                    )}
+                  </form.Subscribe>
                 </div>
-              </div>
-
-              <div className="pt-4 flex justify-end space-x-3 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md shadow-sm"
-                >
-                  Guardar
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 };
 
