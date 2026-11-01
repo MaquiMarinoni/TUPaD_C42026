@@ -8,7 +8,7 @@ from app.producto.model import Producto, ProductoCategoria, ProductoIngrediente
 from app.unidad_medida.model import UnidadMedida
 
 
-def run_seed() -> None:
+def run_catalog_seed() -> None:
     with Session(engine) as session:
         # 1. Seed de Unidades de Medida (Catálogo solo lectura)
         if not session.exec(select(UnidadMedida)).first():
@@ -78,3 +78,39 @@ def run_seed() -> None:
                 ProductoIngrediente(producto_id=p2.id, ingrediente_id=4, cantidad=250),
             ])
             session.commit()
+
+
+def run_seed() -> None:
+    from app.core.config import settings
+    from app.core.security import hash_password
+    from app.modules.usuarios.model import Usuario, Rol, UsuarioRol
+    from app.modules.usuarios.schema import UserCreate
+    from app.pedidos.models import EstadoPedido, FormaPago
+    with Session(engine) as session:
+        for nombre, descripcion in [("admin", "Administración"), ("user", "Usuario del sistema")]:
+            if session.exec(select(Rol).where(Rol.nombre == nombre)).first() is None:
+                session.add(Rol(nombre=nombre, descripcion=descripcion))
+        for i, codigo in enumerate(["PENDIENTE", "CONFIRMADO", "EN_PREP", "EN_CAMINO", "ENTREGADO", "CANCELADO"], 1):
+            if session.get(EstadoPedido, codigo) is None:
+                session.add(EstadoPedido(codigo=codigo, descripcion=codigo.replace("_", " ").capitalize(), orden=i, es_terminal=i >= 5))
+        if session.get(FormaPago, "EFECTIVO") is None:
+            session.add(FormaPago(codigo="EFECTIVO", descripcion="Efectivo"))
+        session.commit()
+        if settings.ADMIN_EMAIL or settings.ADMIN_PASSWORD:
+            data = UserCreate(nombre="Admin", apellido="FoodStore", email=settings.ADMIN_EMAIL, password=settings.ADMIN_PASSWORD)
+            email = str(data.email).lower()
+            # Nunca promueve una cuenta existente ni restablece su contraseña al reiniciar.
+            if session.exec(select(Usuario).where(Usuario.email == email)).first() is None:
+                user = Usuario(nombre=data.nombre, apellido=data.apellido, email=email, password_hash=hash_password(data.password))
+                session.add(user)
+                session.flush()
+                role = session.exec(select(Rol).where(Rol.nombre == "admin")).one()
+                session.add(UsuarioRol(usuario_id=user.id, rol_id=role.id))
+                session.commit()
+    run_catalog_seed()
+
+
+if __name__ == "__main__":
+    from app.core.database import create_db_and_tables
+    create_db_and_tables()
+    run_seed()

@@ -51,3 +51,14 @@ class CategoriaPaginatedResponse(BaseModel):
     offset: int
     limit: int
     items: list[CategoriaRead]
+
+class CategoriaPatch(BaseModel):
+    nombre: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    descripcion: Optional[str] = Field(default=None, max_length=255)
+
+    @field_validator("nombre")
+    @classmethod
+    def nombre_valido(cls, value: Optional[str]) -> str:
+        if value is None or not value.strip():
+            raise ValueError("El nombre no puede estar vacío")
+        return value.strip()

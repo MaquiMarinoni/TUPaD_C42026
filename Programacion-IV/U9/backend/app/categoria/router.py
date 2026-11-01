@@ -4,6 +4,7 @@ from sqlmodel import Session
 
 from app.categoria.schema import (
     CategoriaCreate,
+    CategoriaPatch,
     CategoriaPaginatedResponse,
     CategoriaRead,
     CategoriaUpdate,
@@ -59,3 +60,12 @@ def listar_productos_de_categoria(
     categoria_id: int, session: Session = Depends(get_session)
 ):
     return CategoriaService.get_productos(session, categoria_id)
+
+@router.patch("/{categoria_id}", response_model=CategoriaRead)
+def modificar_categoria(categoria_id: int, data: CategoriaPatch, session: Session = Depends(get_session)):
+    actual = CategoriaService.get_by_id(session, categoria_id)
+    cambios = data.model_dump(exclude_unset=True)
+    return CategoriaService.update(session, categoria_id, CategoriaUpdate(
+        nombre=cambios.get("nombre", actual.nombre),
+        descripcion=cambios.get("descripcion", actual.descripcion),
+    ))

@@ -42,6 +42,7 @@ def post_ingrediente(data: IngredienteCreate, session: Session = Depends(get_ses
     return crear_ingrediente(session, data)
 
 
+@router.patch("/{ingrediente_id}", response_model=IngredienteRead, status_code=status.HTTP_200_OK)
 @router.put("/{ingrediente_id}", response_model=IngredienteRead, status_code=status.HTTP_200_OK)
 def put_ingrediente(
     ingrediente_id: int,

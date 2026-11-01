@@ -1,175 +1,38 @@
-@baseUrl = http://localhost:8000
+# VS Code + REST Client. Iniciar sesión antes de ejecutar el CRUD.
+# Completar email/contraseña del administrador creado con .env.
+@base = http://localhost:8000/api/v1
+@email = admin@example.com
+@password = REEMPLAZAR
 
-# ==========================================
-# 0. HEALTH & UNIDADES DE MEDIDA (CATÁLOGO)
-# ==========================================
+### Login: REST Client conserva la cookie de la respuesta
+POST {{base}}/auth/token
+Content-Type: application/x-www-form-urlencoded
 
-### Health Check API
-GET {{baseUrl}}/health/
-Accept: application/json
+username={{email}}&password={{password}}
 
-### Health Check Base de Datos
-GET {{baseUrl}}/health/db
-Accept: application/json
+### Perfil sin hash ni token
+GET {{base}}/auth/me
 
-### Listar Unidades de Medida (Seed Data)
-GET {{baseUrl}}/unidades-medida/
-Accept: application/json
+### Listado de categorías
+GET {{base}}/categorias/
 
-### Obtener Unidad de Medida por ID
-GET {{baseUrl}}/unidades-medida/1
-Accept: application/json
-
-
-# ==========================================
-# 1. CATEGORÍAS (CRUD + Paginación + RN-05)
-# ==========================================
-
-### Listar Categorías (paginado y filtro opcional)
-GET {{baseUrl}}/categorias/?offset=0&limit=10
-Accept: application/json
-
-### Crear Categoría (201 Created)
-POST {{baseUrl}}/categorias/
+### Crear categoría (admin: 201; user: 403)
+POST {{base}}/categorias/
 Content-Type: application/json
 
-{
-  "nombre": "Empanadas",
-  "descripcion": "Empanadas al horno y fritas"
-}
+{"nombre":"Categoría de prueba","descripcion":"Prueba U9"}
 
-### Obtener Categoría por ID
-GET {{baseUrl}}/categorias/1
-Accept: application/json
+### Listado de productos y sus categoria_ids
+GET {{base}}/productos/
 
-### Actualizar Categoría (PUT)
-PUT {{baseUrl}}/categorias/7
-Content-Type: application/json
+### Listado de ingredientes conservados desde U8
+GET {{base}}/ingredientes/
 
-{
-  "nombre": "Empanadas Tucumanas",
-  "descripcion": "Cortadas a cuchillo al horno de barro"
-}
+### Usuarios (solo admin)
+GET {{base}}/auth/admin/usuarios
 
-### Intentar eliminar Categoría 1 con productos asociados (Debe dar 409 Conflict por RN-05)
-DELETE {{baseUrl}}/categorias/1
+### Logout
+POST {{base}}/auth/logout
 
-### Eliminar Categoría 7 sin productos asociados (Debe dar 204 No Content - Soft Delete)
-DELETE {{baseUrl}}/categorias/7
-
-
-# ==========================================
-# 2. INGREDIENTES (CRUD)
-# ==========================================
-
-### Listar Ingredientes
-GET {{baseUrl}}/ingredientes/?offset=0&limit=10
-Accept: application/json
-
-### Crear Ingrediente (201 Created)
-POST {{baseUrl}}/ingredientes/
-Content-Type: application/json
-
-{
-  "nombre": "Panceta Ahumada",
-  "descripcion": "Fetas de panceta crocante",
-  "unidad_medida_id": 2
-}
-
-### Obtener Ingrediente por ID
-GET {{baseUrl}}/ingredientes/1
-Accept: application/json
-
-### Actualizar Ingrediente
-PUT {{baseUrl}}/ingredientes/5
-Content-Type: application/json
-
-{
-  "nombre": "Panceta Ahumada Premium",
-  "descripcion": "Fetas gruesas de panceta ahumada",
-  "unidad_medida_id": 2
-}
-
-### Eliminar Ingrediente (204 No Content - Soft Delete)
-DELETE {{baseUrl}}/ingredientes/5
-
-
-# ==========================================
-# 3. PRODUCTOS Y RELACIONES N:M (HU-06 y HU-07)
-# ==========================================
-
-### Listar Productos
-GET {{baseUrl}}/productos/?offset=0&limit=10
-Accept: application/json
-
-### Crear Producto con Categorías e Ingredientes (201 Created)
-POST {{baseUrl}}/productos/
-Content-Type: application/json
-
-{
-  "nombre": "Hamburguesa Bacon King",
-  "descripcion": "Medallón doble con cheddar y panceta",
-  "precio_base": 10500,
-  "imagenes_url": [
-    "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=500"
-  ],
-  "disponible": true,
-  "categoria_ids": [1, 6],
-  "ingredientes": [
-    { "ingrediente_id": 1, "cantidad": 300 },
-    { "ingrediente_id": 2, "cantidad": 60 }
-  ]
-}
-
-### Validación RN-19: Crear Producto sin categoria_ids (Debe dar 422 Unprocessable Entity)
-POST {{baseUrl}}/productos/
-Content-Type: application/json
-
-{
-  "nombre": "Producto inválido sin categorías",
-  "descripcion": "Debe fallar con 422",
-  "precio_base": 5000,
-  "imagenes_url": [],
-  "disponible": true,
-  "categoria_ids": []
-}
-
-### Obtener Producto por ID
-GET {{baseUrl}}/productos/1
-Accept: application/json
-
-### Actualizar Producto y reemplazar sus relaciones N:M (RN-12 y RN-21)
-PUT {{baseUrl}}/productos/3
-Content-Type: application/json
-
-{
-  "nombre": "Hamburguesa Bacon King Especial",
-  "descripcion": "Versión mejorada con triple cheddar",
-  "precio_base": 11500,
-  "imagenes_url": [
-    "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=500"
-  ],
-  "disponible": true,
-  "categoria_ids": [1],
-  "ingredientes": [
-    { "ingrediente_id": 1, "cantidad": 300 },
-    { "ingrediente_id": 2, "cantidad": 120 },
-    { "ingrediente_id": 3, "cantidad": 1 }
-  ]
-}
-
-### HU-07: Consultar Categorías de un Producto
-GET {{baseUrl}}/productos/1/categorias
-Accept: application/json
-
-### HU-07: Consultar Ingredientes de un Producto
-GET {{baseUrl}}/productos/1/ingredientes
-Accept: application/json
-
-### HU-07: Consultar Productos de una Categoría
-GET {{baseUrl}}/categorias/1/productos
-Accept: application/json
-
-### Eliminar Producto (204 No Content - Borra en cascada relaciones N:M y aplica Soft Delete)
-DELETE {{baseUrl}}/productos/3
-Accept: application/json
+### Sin sesión: 401
+GET {{base}}/categorias/

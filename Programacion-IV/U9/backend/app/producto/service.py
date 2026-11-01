@@ -49,8 +49,7 @@ def listar_productos(
     incluir_inactivos: bool = False,
 ) -> ProductoPaginatedResponse:
     query = select(Producto)
-    if not incluir_inactivos:
-        query = query.where(Producto.deleted_at.is_(None))  # type: ignore[union-attr]
+    query = query.where(Producto.deleted_at.is_(None))  # type: ignore[union-attr]
     if nombre:
         query = query.where(func.lower(Producto.nombre).contains(nombre.strip().lower()))
 

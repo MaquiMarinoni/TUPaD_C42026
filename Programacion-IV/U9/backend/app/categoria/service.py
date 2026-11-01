@@ -20,8 +20,7 @@ class CategoriaService:
         incluir_inactivos: bool = False,
     ) -> CategoriaPaginatedResponse:
         query = select(Categoria)
-        if not incluir_inactivos:
-            query = query.where(Categoria.deleted_at.is_(None))
+        query = query.where(Categoria.deleted_at.is_(None))
         if nombre:
             query = query.where(func.lower(Categoria.nombre).contains(nombre.strip().lower()))
 

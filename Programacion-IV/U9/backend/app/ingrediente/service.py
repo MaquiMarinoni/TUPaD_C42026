@@ -20,8 +20,7 @@ def listar_ingredientes(
     incluir_inactivos: bool = False,
 ) -> IngredientePaginatedResponse:
     query = select(Ingrediente)
-    if not incluir_inactivos:
-        query = query.where(Ingrediente.deleted_at.is_(None))  # type: ignore[union-attr]
+    query = query.where(Ingrediente.deleted_at.is_(None))  # type: ignore[union-attr]
     if nombre:
         query = query.where(func.lower(Ingrediente.nombre).contains(nombre.strip().lower()))
 

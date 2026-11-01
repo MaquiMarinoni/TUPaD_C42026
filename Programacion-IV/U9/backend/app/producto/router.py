@@ -45,6 +45,7 @@ def post_producto(data: ProductoCreate, session: Session = Depends(get_session))
     return crear_producto(session, data)
 
 
+@router.patch("/{producto_id}", response_model=ProductoRead, status_code=status.HTTP_200_OK)
 @router.put("/{producto_id}", response_model=ProductoRead, status_code=status.HTTP_200_OK)
 def put_producto(
     producto_id: int,

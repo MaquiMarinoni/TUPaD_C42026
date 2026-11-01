@@ -1,56 +1,45 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends
+from sqlmodel import Session, select
+from app.core.database import get_session
+from app.core.deps import get_current_active_user, require_role
+from app.modules.usuarios.schema import UserPublic
+from app.pedidos.models import EstadoPedido, FormaPago
 from app.pedidos.schemas import PedidoCreate, PedidoRead, PedidoUpdate
-from app.pedidos.service import (
-    EstadoPedidoTerminalError,
-    PedidoNoEncontrado,
-    PedidoService,
-    ProductoNoEncontrado,
-)
+from app.pedidos.service import PedidoService
 
-router = APIRouter(prefix="/pedidos", tags=["pedidos"])
+router = APIRouter(tags=["Pedidos"], dependencies=[Depends(get_current_active_user)])
 
 
-@router.get("", response_model=list[PedidoRead], status_code=status.HTTP_200_OK)
-@router.get("/", response_model=list[PedidoRead], status_code=status.HTTP_200_OK, include_in_schema=False)
-def listar_pedidos():
-    service = PedidoService()
-    return service.listar()
+@router.get("/pedidos", response_model=list[PedidoRead])
+def listar():
+    return PedidoService().listar()
 
 
-@router.get("/{pedido_id}", response_model=PedidoRead, status_code=status.HTTP_200_OK)
-def obtener_pedido(pedido_id: int):
-    service = PedidoService()
-    try:
-        return service.obtener(pedido_id)
-    except PedidoNoEncontrado as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+@router.get("/pedidos/{pedido_id}", response_model=PedidoRead)
+def obtener(pedido_id: int):
+    return PedidoService().obtener(pedido_id)
 
 
-@router.post("", response_model=PedidoRead, status_code=status.HTTP_201_CREATED)
-@router.post("/", response_model=PedidoRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
-def crear_pedido(data: PedidoCreate):
-    service = PedidoService()
-    try:
-        return service.crear(data)
-    except ProductoNoEncontrado as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+@router.post("/pedidos", response_model=PedidoRead, status_code=201)
+def crear(data: PedidoCreate, user: UserPublic = Depends(require_role(["user", "admin"]))):
+    return PedidoService().crear(data, user.id)
 
 
-@router.put("/{pedido_id}", response_model=PedidoRead, status_code=status.HTTP_200_OK)
-def actualizar_estado_pedido(pedido_id: int, data: PedidoUpdate):
-    service = PedidoService()
-    try:
-        return service.actualizar_estado(pedido_id, data)
-    except PedidoNoEncontrado as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except EstadoPedidoTerminalError as e:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+@router.put("/pedidos/{pedido_id}", response_model=PedidoRead)
+def actualizar(pedido_id: int, data: PedidoUpdate, user: UserPublic = Depends(require_role(["admin"]))):
+    return PedidoService().actualizar_estado(pedido_id, data, user.id)
 
 
-@router.delete("/{pedido_id}", status_code=status.HTTP_204_NO_CONTENT)
-def eliminar_pedido(pedido_id: int):
-    service = PedidoService()
-    try:
-        service.eliminar(pedido_id)
-    except PedidoNoEncontrado as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+@router.delete("/pedidos/{pedido_id}", status_code=204, dependencies=[Depends(require_role(["admin"]))])
+def eliminar(pedido_id: int):
+    PedidoService().eliminar(pedido_id)
+
+
+@router.get("/estados-pedido", response_model=list[EstadoPedido])
+def estados(session: Session = Depends(get_session)):
+    return session.exec(select(EstadoPedido).order_by(EstadoPedido.orden)).all()
+
+
+@router.get("/formas-pago", response_model=list[FormaPago])
+def formas_pago(session: Session = Depends(get_session)):
+    return session.exec(select(FormaPago)).all()
