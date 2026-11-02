@@ -1,0 +1,37 @@
+{
+    "estudiantes": [
+        {
+            "id": "E001",
+            "nombre": "Ana Pérez",
+            "legajo": "1001"
+        },
+        {
+            "id": "E002",
+            "nombre": "Luis Gómez",
+            "legajo": "1002"
+        }
+    ],
+    "responsables": [
+        {
+            "id": "R001",
+            "nombre": "Laura Díaz",
+            "area": "Secretaría Académica"
+        },
+        {
+            "id": "R002",
+            "nombre": "Diego Ruiz",
+            "area": "Departamento de Alumnos"
+        }
+    ],
+    "solicitudes": [
+        {
+            "id": 1,
+            "estudiante_id": "E001",
+            "descripcion": "Solicito una constancia de alumno regular.",
+            "tipo": "Certificado",
+            "prioridad": "Media",
+            "estado": "Resuelta",
+            "responsable_id": "R001"
+        }
+    ]
+}
