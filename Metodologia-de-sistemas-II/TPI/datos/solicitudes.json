@@ -32,6 +32,15 @@
             "prioridad": "Media",
             "estado": "Resuelta",
             "responsable_id": "R001"
+        },
+        {
+            "id": 2,
+            "estudiante_id": "E002",
+            "descripcion": "Necesito consultar las fechas de inscripción.",
+            "tipo": "Consulta",
+            "prioridad": "Alta",
+            "estado": "En atención",
+            "responsable_id": "R002"
         }
     ]
 }
