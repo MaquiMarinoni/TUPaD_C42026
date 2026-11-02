@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 datos/*.tmp
+_respaldo_antes_refactor/
+completar_refactoring.py
