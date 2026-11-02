@@ -1,0 +1,29 @@
+Fecha local: 2026-11-02T07:31:42.454230-03:00
+Python: 3.13.14 (tags/v3.13.14:fd17997, Jun 10 2026, 13:03:48) [MSC v.1944 64 bit (AMD64)]
+Comando: python -m unittest discover -s tests -v
+
+test_cancelacion_desde_estados_activos (test_refactoring.PruebasRefactoring.test_cancelacion_desde_estados_activos) ... ok
+test_contrato_comun_de_repositorios (test_refactoring.PruebasRefactoring.test_contrato_comun_de_repositorios) ... ok
+test_fallo_del_repositorio_no_modifica_memoria (test_refactoring.PruebasRefactoring.test_fallo_del_repositorio_no_modifica_memoria) ... ok
+test_registrar_con_objeto_de_parametros (test_refactoring.PruebasRefactoring.test_registrar_con_objeto_de_parametros) ... ok
+test_servicio_con_ambos_repositorios (test_refactoring.PruebasRefactoring.test_servicio_con_ambos_repositorios) ... ok
+test_transicion_del_dominio_sin_archivos (test_refactoring.PruebasRefactoring.test_transicion_del_dominio_sin_archivos) ... ok
+test_01_registrar_solicitud_valida (test_sistema.PruebasSistemaAcademico.test_01_registrar_solicitud_valida) ... ok
+test_02_rechazar_estudiante_inexistente (test_sistema.PruebasSistemaAcademico.test_02_rechazar_estudiante_inexistente) ... ok
+test_03_validar_limites_de_descripcion (test_sistema.PruebasSistemaAcademico.test_03_validar_limites_de_descripcion) ... ok
+test_04_rechazar_tipo_y_prioridad_invalidos (test_sistema.PruebasSistemaAcademico.test_04_rechazar_tipo_y_prioridad_invalidos) ... ok
+test_05_asignar_y_rechazar_responsable_inexistente (test_sistema.PruebasSistemaAcademico.test_05_asignar_y_rechazar_responsable_inexistente) ... ok
+test_06_rechazar_atencion_sin_responsable (test_sistema.PruebasSistemaAcademico.test_06_rechazar_atencion_sin_responsable) ... ok
+test_07_completar_transiciones_validas (test_sistema.PruebasSistemaAcademico.test_07_completar_transiciones_validas) ... ok
+test_08_rechazar_cambios_en_solicitud_resuelta (test_sistema.PruebasSistemaAcademico.test_08_rechazar_cambios_en_solicitud_resuelta) ... ok
+test_09_combinar_filtros (test_sistema.PruebasSistemaAcademico.test_09_combinar_filtros) ... ok
+test_10_consultar_y_reportar_sin_resultados (test_sistema.PruebasSistemaAcademico.test_10_consultar_y_reportar_sin_resultados) ... ok
+test_11_recuperar_datos_y_conservar_ids_unicos (test_sistema.PruebasSistemaAcademico.test_11_recuperar_datos_y_conservar_ids_unicos) ... ok
+test_12_rechazar_json_corrupto_sin_reemplazarlo (test_sistema.PruebasSistemaAcademico.test_12_rechazar_json_corrupto_sin_reemplazarlo) ... ok
+test_13_generar_reporte_coherente (test_sistema.PruebasSistemaAcademico.test_13_generar_reporte_coherente) ... ok
+test_14_conservar_datos_si_falla_el_guardado (test_sistema.PruebasSistemaAcademico.test_14_conservar_datos_si_falla_el_guardado) ... ok
+
+----------------------------------------------------------------------
+Ran 20 tests in 0.068s
+
+OK
