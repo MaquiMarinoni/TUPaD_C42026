@@ -41,6 +41,18 @@ class SistemaAcademico:
 
             self.datos = contenido
 
+    def _guardar_datos(self, nuevos_datos):
+        self.archivo.parent.mkdir(parents=True, exist_ok=True)
+        temporal = self.archivo.with_suffix(".tmp")
+
+        with temporal.open("w", encoding="utf-8") as archivo:
+            json.dump(nuevos_datos, archivo, ensure_ascii=False, indent=4)
+
+        temporal.replace(self.archivo)
+
+        # Se actualiza la memoria solo después de guardar correctamente.
+        self.datos = nuevos_datos
+
     def registrar(self, estudiante_id, descripcion, tipo, prioridad):
         estudiante = next(
             (
@@ -85,14 +97,7 @@ class SistemaAcademico:
             "solicitudes": self.datos["solicitudes"] + [solicitud],
         }
 
-        self.archivo.parent.mkdir(parents=True, exist_ok=True)
-        temporal = self.archivo.with_suffix(".tmp")
-
-        with temporal.open("w", encoding="utf-8") as archivo:
-            json.dump(nuevos_datos, archivo, ensure_ascii=False, indent=4)
-
-        temporal.replace(self.archivo)
-        self.datos = nuevos_datos
+        self._guardar_datos(nuevos_datos)
         return nuevo_id
 
     def asignar(self, solicitud_id, responsable_id):
@@ -130,14 +135,7 @@ class SistemaAcademico:
         ]
         nuevos_datos = {**self.datos, "solicitudes": nuevas_solicitudes}
 
-        self.archivo.parent.mkdir(parents=True, exist_ok=True)
-        temporal = self.archivo.with_suffix(".tmp")
-
-        with temporal.open("w", encoding="utf-8") as archivo:
-            json.dump(nuevos_datos, archivo, ensure_ascii=False, indent=4)
-
-        temporal.replace(self.archivo)
-        self.datos = nuevos_datos
+        self._guardar_datos(nuevos_datos)
 
     def cambiar_estado(self, solicitud_id, nuevo_estado):
         solicitud = next(
@@ -174,14 +172,7 @@ class SistemaAcademico:
         ]
         nuevos_datos = {**self.datos, "solicitudes": nuevas_solicitudes}
 
-        self.archivo.parent.mkdir(parents=True, exist_ok=True)
-        temporal = self.archivo.with_suffix(".tmp")
-
-        with temporal.open("w", encoding="utf-8") as archivo:
-            json.dump(nuevos_datos, archivo, ensure_ascii=False, indent=4)
-
-        temporal.replace(self.archivo)
-        self.datos = nuevos_datos
+        self._guardar_datos(nuevos_datos)
 
     def consultar(self, solicitud_id=None, estado="", tipo="", prioridad=""):
         resultados = []
