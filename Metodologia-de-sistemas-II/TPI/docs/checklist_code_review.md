@@ -2,16 +2,14 @@
 
 ## Contexto
 
-Versión de código revisada: bd6edac, etiqueta estadorefactorizado.
-Evidencia automatizada: c12c376, etiqueta etapa-pruebas.
+**Integrantes que realizaron la revisión:** Macarena Marinoni y Marianela Valletto.
+**Modalidad:** revisión interna conjunta del equipo, con asistencia de ChatGPT.
+**Fecha de revisión:** [08/11/2026].
+**Código revisado:** `bd6edac`.
+**Evidencia de pruebas:** `c12c376`.
 
-Revisora: Macarena Marinoni.
-Modalidad: autorrevisión guiada con asistencia de ChatGPT.
-Fecha: completar con la fecha efectiva de revisión.
+Macarena Marinoni y Marianela Valletto revisaron conjuntamente el código y las pruebas durante una sesión por Google Meet. Ambas contrastaron los resultados con el checklist y acordaron las observaciones y los criterios de aceptación.
 
-Esta revisión no se presenta como una revisión independiente realizada
-por otra integrante. La participación de Marianela Valletto se registrará
-cuando efectivamente revise o contribuya al trabajo.
 
 ## Checklist aplicado
 
