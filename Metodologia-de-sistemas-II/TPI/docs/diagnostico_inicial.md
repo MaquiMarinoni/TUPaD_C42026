@@ -7,6 +7,8 @@
 - Archivo: `src/main.py`.
 - Sistema: Gestión de Solicitudes Académicas.
 
+> Este documento registra el diagnóstico previo al refactoring. Las mejoras se expresan como propuestas porque describen el plan definido sobre la versión inicial. Su implementación final se encuentra documentada en `refactorings.md`.
+
 ## Introducción
 
 El sistema base permite registrar solicitudes, asignar responsables,

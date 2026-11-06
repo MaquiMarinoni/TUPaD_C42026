@@ -4,7 +4,7 @@
 
 **Integrantes que realizaron la revisión:** Macarena Marinoni y Marianela Valletto.
 **Modalidad:** revisión interna conjunta del equipo, con asistencia de ChatGPT.
-**Fecha de revisión:** [08/11/2026].
+**Fecha de revisión:** 08/11/2026.
 **Código revisado:** `bd6edac`.
 **Evidencia de pruebas:** `c12c376`.
 
@@ -117,6 +117,6 @@ Se acepta la versión refactorizada para el alcance local y los
 escenarios comprobados. Las pruebas automatizadas y el recorrido
 manual respaldan el comportamiento evaluado.
 
-La aceptación técnica no equivale a la entrega completa del TPI:
-todavía deben cerrarse el informe, los anexos, la participación
-de las integrantes, la publicación del repositorio y el video.
+La revisión técnica se considera finalizada. El informe, los anexos,
+la participación de las integrantes, el repositorio y el video fueron
+verificados como parte del control final de la entrega.

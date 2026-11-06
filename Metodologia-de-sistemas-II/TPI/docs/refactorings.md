@@ -44,8 +44,8 @@ en los escenarios evaluados; no garantizan ausencia de otros defectos.
 
 ### Trazabilidad
 
-El cambio y este registro se conservarán en el commit:
-TPI MSII: extraer metodo de guardado sin cambiar comportamiento
+El cambio y su registro quedaron documentados en el commit
+`3a989ac` — `TPI MSII: extraer metodo de guardado sin cambiar comportamiento`.
 
 R02 — Extract Class para separar la persistencia
 Se trasladaron la lectura y escritura de JSON a RepositorioJSON.
