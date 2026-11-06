@@ -84,3 +84,7 @@ La versión final conserva las funcionalidades del sistema base y presenta una e
 Los seis hitos exigidos por la consigna se encuentran publicados mediante las etiquetas `estado-inicial`, `etapa-diagnostico`, `etapa-refactoring`, `estadorefactorizado`, `etapa-pruebas` y `etapa-docs`.
 
 Video de defensa y demostración: https://www.youtube.com/watch?v=Zn1Hl7asO4U
+
+## Participación del equipo
+
+La identificación de las contribuciones de cada integrante se encuentra en [docs/contribuciones.md](docs/contribuciones.md).
