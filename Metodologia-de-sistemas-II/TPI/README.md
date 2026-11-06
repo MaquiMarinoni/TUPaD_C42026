@@ -58,7 +58,7 @@ Versiones
 - etapa-refactoring: reorganización del código.
 - estadorefactorizado: versión refactorizada.
 - etapa-pruebas: evidencia automatizada de la versión refactorizada.
-- etapa-docs: se incorporará al cerrar la documentación.
+- etapa-docs: documentación final, evidencias.
 La etiqueta estado-inicial precede a la incorporación de las pruebas.
 Las 14 pruebas iniciales están disponibles desde etapa-diagnostico.
 Alcance y límites
@@ -77,5 +77,10 @@ Se utilizó ChatGPT como apoyo para la planificación, documentación,
 propuestas de código, refactoring y pruebas. Se utilizó además un script
 de transformación para separar componentes y generar documentación.
 
-Las integrantes deben revisar y comprender las decisiones y conservar
-los intercambios relevantes como parte de los anexos solicitados.
+## Estado final de la entrega
+
+La versión final conserva las funcionalidades del sistema base y presenta una estructura separada en consola, servicio, dominio y repositorio. Se ejecutaron 20 pruebas automatizadas con resultado satisfactorio.
+
+Los seis hitos exigidos por la consigna se encuentran publicados mediante las etiquetas `estado-inicial`, `etapa-diagnostico`, `etapa-refactoring`, `estadorefactorizado`, `etapa-pruebas` y `etapa-docs`.
+
+Video de defensa y demostración: https://www.youtube.com/watch?v=Zn1Hl7asO4U
