@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* Tema oscuro */
+html.dark {
+  color-scheme: dark;
+  background-color: #0f172a;
+}
+
+html.dark .bg-white {
+  background-color: #1e293b;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-slate-100 {
+  background-color: #0f172a;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700 {
+  color: #f1f5f9;
+}
+
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: #cbd5e1;
+}
+
+html.dark .border,
+html.dark .border-slate-200,
+html.dark .border-slate-300 {
+  border-color: #475569;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #334155;
+  color: #f8fafc;
+  border-color: #64748b;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #cbd5e1;
+}
+
+html.dark .hover\:bg-slate-100:hover {
+  background-color: #334155;
+}
+
+html.dark .bg-indigo-50 {
+  background-color: #312e81;
+}
+
+html.dark .text-indigo-700 {
+  color: #c7d2fe;
+}
+
+html.dark .bg-red-50 {
+  background-color: #450a0a;
+}
+
+html.dark .text-red-700 {
+  color: #fca5a5;
+}

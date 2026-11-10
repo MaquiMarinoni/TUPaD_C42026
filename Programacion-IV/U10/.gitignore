@@ -1,0 +1,12 @@
+
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/*.tsbuildinfo
+
+frontend/refactor_hooks.ps1
+frontend/agregar_notificaciones.py
+frontend/corregir_acentos.py
+
+TP_U10_Frontend_Marinoni.zip
