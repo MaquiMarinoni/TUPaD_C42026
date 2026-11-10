@@ -1,0 +1,166 @@
+
+@baseUrl = http://127.0.0.1:8000/api/v1
+@json = application/json
+
+### 1. Crear producto (201)
+# @name crearProducto
+POST {{baseUrl}}/productos
+Content-Type: {{json}}
+
+{
+  "nombre": "Producto Prueba P2",
+  "descripcion": "Producto para pruebas REST Client",
+  "precio_base": 2500.50,
+  "unidad_venta_id": 5,
+  "stock_cantidad": 10,
+  "disponible": true
+}
+
+### 2. Listar productos activos (200)
+GET {{baseUrl}}/productos
+
+### 3. Consultar producto por ID (200)
+GET {{baseUrl}}/productos/{{crearProducto.response.body.$.id}}
+
+### 4. Filtrar por disponibilidad
+GET {{baseUrl}}/productos?disponible=true
+
+### 5. Buscar por nombre
+GET {{baseUrl}}/productos?search=Producto%20Prueba%20P2
+
+### 6. Paginacion
+GET {{baseUrl}}/productos?skip=0&limit=1
+
+### 7. Filtrar productos activos
+GET {{baseUrl}}/productos?activo=true
+
+### 8. Nombre duplicado (409)
+POST {{baseUrl}}/productos
+Content-Type: {{json}}
+
+{
+  "nombre": "Producto Prueba P2",
+  "precio_base": 2500,
+  "unidad_venta_id": 5,
+  "stock_cantidad": 5,
+  "disponible": true
+}
+
+### 9. Nombre demasiado corto (422)
+POST {{baseUrl}}/productos
+Content-Type: {{json}}
+
+{
+  "nombre": "AB",
+  "precio_base": 1000,
+  "unidad_venta_id": 5,
+  "stock_cantidad": 2
+}
+
+### 10. Precio negativo (422)
+POST {{baseUrl}}/productos
+Content-Type: {{json}}
+
+{
+  "nombre": "Producto Precio Negativo",
+  "precio_base": -100,
+  "unidad_venta_id": 5,
+  "stock_cantidad": 2
+}
+
+### 11. Stock negativo (422)
+POST {{baseUrl}}/productos
+Content-Type: {{json}}
+
+{
+  "nombre": "Producto Stock Negativo",
+  "precio_base": 1000,
+  "unidad_venta_id": 5,
+  "stock_cantidad": -3
+}
+
+### 12. Stock decimal en unidad contable (422)
+POST {{baseUrl}}/productos
+Content-Type: {{json}}
+
+{
+  "nombre": "Producto Stock Decimal",
+  "precio_base": 1000,
+  "unidad_venta_id": 5,
+  "stock_cantidad": 2.5
+}
+
+### 13. Unidad inexistente (404)
+POST {{baseUrl}}/productos
+Content-Type: {{json}}
+
+{
+  "nombre": "Producto Unidad Inexistente",
+  "precio_base": 1000,
+  "unidad_venta_id": 9999,
+  "stock_cantidad": 5
+}
+
+### 14. Producto inexistente (404)
+GET {{baseUrl}}/productos/999999
+
+### 15. Actualizar producto (200)
+# Stock pasa a cero y se pausa la venta
+PUT {{baseUrl}}/productos/{{crearProducto.response.body.$.id}}
+Content-Type: {{json}}
+
+{
+  "nombre": "Producto Prueba P2",
+  "descripcion": "Actualizado",
+  "precio_base": 3000,
+  "unidad_venta_id": 5,
+  "stock_cantidad": 0,
+  "disponible": false
+}
+
+### 16. Verificar hay_stock=false y disponible=false
+GET {{baseUrl}}/productos/{{crearProducto.response.body.$.id}}
+
+### 17. Filtrar venta pausada
+GET {{baseUrl}}/productos?disponible=false
+
+### 18. Actualizacion invalida: stock decimal (422)
+PUT {{baseUrl}}/productos/{{crearProducto.response.body.$.id}}
+Content-Type: {{json}}
+
+{
+  "nombre": "Producto Prueba P2",
+  "descripcion": "No debe guardarse",
+  "precio_base": 3000,
+  "unidad_venta_id": 5,
+  "stock_cantidad": 1.5,
+  "disponible": true
+}
+
+### 19. Verificar que la peticion rechazada no modifico los datos
+GET {{baseUrl}}/productos/{{crearProducto.response.body.$.id}}
+
+### 20. Anular producto (204)
+DELETE {{baseUrl}}/productos/{{crearProducto.response.body.$.id}}
+
+### 21. Consultar productos anulados
+GET {{baseUrl}}/productos?activo=false
+
+### 22. Consultar producto anulado por ID (200)
+GET {{baseUrl}}/productos/{{crearProducto.response.body.$.id}}
+
+### 23. Repetir anulacion (409)
+DELETE {{baseUrl}}/productos/{{crearProducto.response.body.$.id}}
+
+### 24. Modificar producto anulado (409)
+PUT {{baseUrl}}/productos/{{crearProducto.response.body.$.id}}
+Content-Type: {{json}}
+
+{
+  "nombre": "Producto Prueba P2",
+  "descripcion": "Modificacion prohibida",
+  "precio_base": 3000,
+  "unidad_venta_id": 5,
+  "stock_cantidad": 5,
+  "disponible": true
+}

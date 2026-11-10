@@ -1,0 +1,182 @@
+
+@baseUrl = http://127.0.0.1:8000/api/v1
+@json = application/json
+
+### 1. Crear categoria principal (201)
+# @name crearCategoriaA
+POST {{baseUrl}}/categorias
+Content-Type: {{json}}
+
+{
+  "nombre": "Categoria P2 A",
+  "descripcion": "Primera categoria de prueba"
+}
+
+### 2. Crear segunda categoria (201)
+# @name crearCategoriaB
+POST {{baseUrl}}/categorias
+Content-Type: {{json}}
+
+{
+  "nombre": "Categoria P2 B",
+  "descripcion": "Segunda categoria de prueba"
+}
+
+### 3. Nombre de categoria duplicado (409)
+POST {{baseUrl}}/categorias
+Content-Type: {{json}}
+
+{
+  "nombre": "Categoria P2 A",
+  "descripcion": "No debe crearse"
+}
+
+### 4. Nombre demasiado corto (422)
+POST {{baseUrl}}/categorias
+Content-Type: {{json}}
+
+{
+  "nombre": "AB",
+  "descripcion": "Nombre invalido"
+}
+
+### 5. Listar categorias activas (200)
+GET {{baseUrl}}/categorias
+
+### 6. Consultar categoria por ID (200)
+GET {{baseUrl}}/categorias/{{crearCategoriaA.response.body.$.id}}
+
+### 7. Filtrar categorias por nombre (200)
+GET {{baseUrl}}/categorias?search=Categoria%20P2
+
+### 8. Crear producto para clasificar (201)
+# @name crearProductoRelacion
+POST {{baseUrl}}/productos
+Content-Type: {{json}}
+
+{
+  "nombre": "Producto Relaciones P2",
+  "descripcion": "Producto para probar clasificaciones",
+  "precio_base": 4200,
+  "unidad_venta_id": 5,
+  "stock_cantidad": 8,
+  "disponible": true
+}
+
+### 9. Clasificar en categoria A como principal (201)
+POST {{baseUrl}}/productos/{{crearProductoRelacion.response.body.$.id}}/categorias
+Content-Type: {{json}}
+
+{
+  "categoria_id": {{crearCategoriaA.response.body.$.id}},
+  "es_principal": true
+}
+
+### 10. Consultar categorias del producto (200)
+GET {{baseUrl}}/productos/{{crearProductoRelacion.response.body.$.id}}/categorias
+
+### 11. Clasificar en categoria B como principal (201)
+POST {{baseUrl}}/productos/{{crearProductoRelacion.response.body.$.id}}/categorias
+Content-Type: {{json}}
+
+{
+  "categoria_id": {{crearCategoriaB.response.body.$.id}},
+  "es_principal": true
+}
+
+### 12. Verificar cambio de principal (200)
+# Categoria A: false
+# Categoria B: true
+GET {{baseUrl}}/productos/{{crearProductoRelacion.response.body.$.id}}/categorias
+
+### 13. Clasificacion duplicada (409)
+POST {{baseUrl}}/productos/{{crearProductoRelacion.response.body.$.id}}/categorias
+Content-Type: {{json}}
+
+{
+  "categoria_id": {{crearCategoriaA.response.body.$.id}},
+  "es_principal": false
+}
+
+### 14. Filtrar productos por categoria (200)
+GET {{baseUrl}}/productos?categoria_id={{crearCategoriaA.response.body.$.id}}
+
+### 15. Consultar producto con categorias anidadas (200)
+GET {{baseUrl}}/productos/{{crearProductoRelacion.response.body.$.id}}
+
+### 16. Actualizar categoria A (200)
+PUT {{baseUrl}}/categorias/{{crearCategoriaA.response.body.$.id}}
+Content-Type: {{json}}
+
+{
+  "nombre": "Categoria P2 A Editada",
+  "descripcion": "Categoria modificada"
+}
+
+### 17. Anular categoria B (204)
+DELETE {{baseUrl}}/categorias/{{crearCategoriaB.response.body.$.id}}
+
+### 18. Verificar categoria anulada (200)
+GET {{baseUrl}}/categorias/{{crearCategoriaB.response.body.$.id}}
+
+### 19. Verificar que el producto sigue activo (200)
+GET {{baseUrl}}/productos/{{crearProductoRelacion.response.body.$.id}}
+
+### 20. Crear otro producto (201)
+# @name crearProductoSegundo
+POST {{baseUrl}}/productos
+Content-Type: {{json}}
+
+{
+  "nombre": "Segundo Producto Relaciones P2",
+  "descripcion": "Prueba de categoria anulada",
+  "precio_base": 3500,
+  "unidad_venta_id": 5,
+  "stock_cantidad": 5,
+  "disponible": true
+}
+
+### 21. Clasificar en categoria anulada (409)
+POST {{baseUrl}}/productos/{{crearProductoSegundo.response.body.$.id}}/categorias
+Content-Type: {{json}}
+
+{
+  "categoria_id": {{crearCategoriaB.response.body.$.id}},
+  "es_principal": false
+}
+
+### 22. Clasificar en categoria inexistente (404)
+POST {{baseUrl}}/productos/{{crearProductoSegundo.response.body.$.id}}/categorias
+Content-Type: {{json}}
+
+{
+  "categoria_id": 999999,
+  "es_principal": false
+}
+
+### 23. Anular producto segundo (204)
+DELETE {{baseUrl}}/productos/{{crearProductoSegundo.response.body.$.id}}
+
+### 24. Clasificar producto anulado (409)
+POST {{baseUrl}}/productos/{{crearProductoSegundo.response.body.$.id}}/categorias
+Content-Type: {{json}}
+
+{
+  "categoria_id": {{crearCategoriaA.response.body.$.id}},
+  "es_principal": false
+}
+
+### 25. Modificar categoria anulada (409)
+PUT {{baseUrl}}/categorias/{{crearCategoriaB.response.body.$.id}}
+Content-Type: {{json}}
+
+{
+  "nombre": "Categoria Anulada Modificada",
+  "descripcion": "No debe guardarse"
+}
+
+### 26. Repetir anulacion de categoria (409)
+DELETE {{baseUrl}}/categorias/{{crearCategoriaB.response.body.$.id}}
+
+### 27. Consultar categorias anuladas (200)
+GET {{baseUrl}}/categorias?activo=false

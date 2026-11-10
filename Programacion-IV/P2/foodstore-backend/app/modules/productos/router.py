@@ -1,100 +1,127 @@
-from typing import Optional
-from fastapi import APIRouter, Depends, Query, status
+
+from fastapi import APIRouter, Depends, Path, Query, Response
 from sqlmodel import Session
+
 from app.core.database import get_session
-from app.producto.schema import (
-    ProductoCategoriaAsignacion,
+from app.modules.productos.schema import (
     ProductoCreate,
-    ProductoPaginatedResponse,
-    ProductoRead,
     ProductoUpdate,
+    ProductoPublic,
+    ProductoCategoriaCreate,
+    CategoriaProductoPublic,
 )
-from app.producto.service import (
-    actualizar_producto,
-    asignar_categoria_a_producto,
-    crear_producto,
-    eliminar_producto,
-    listar_productos,
-    obtener_producto,
-    quitar_categoria_de_producto,
+from app.modules.productos import service
+
+
+router = APIRouter(
+    prefix="/productos",
+    tags=["Productos"]
 )
 
-router = APIRouter(prefix="/productos", tags=["Productos"])
 
-
-@router.get("", response_model=ProductoPaginatedResponse, status_code=status.HTTP_200_OK)
-@router.get("/", response_model=ProductoPaginatedResponse, status_code=status.HTTP_200_OK, include_in_schema=False)
-def get_productos(
-    offset: int = Query(default=0, ge=0),
-    limit: int = Query(default=100, ge=1, le=200),
-    nombre: Optional[str] = Query(default=None),
-    incluir_inactivos: bool = Query(default=False),
-    session: Session = Depends(get_session),
+@router.post(
+    "",
+    response_model=ProductoPublic,
+    status_code=201
+)
+def crear_producto(
+    datos: ProductoCreate,
+    session: Session = Depends(get_session)
 ):
-    return listar_productos(session, offset, limit, nombre, incluir_inactivos)
+    return service.crear_producto(session, datos)
 
 
-@router.get("/{producto_id}", response_model=ProductoRead, status_code=status.HTTP_200_OK)
-def get_producto(producto_id: int, session: Session = Depends(get_session)):
-    return obtener_producto(session, producto_id)
-
-
-@router.post("", response_model=ProductoRead, status_code=status.HTTP_201_CREATED)
-@router.post("/", response_model=ProductoRead, status_code=status.HTTP_201_CREATED, include_in_schema=False)
-def post_producto(data: ProductoCreate, session: Session = Depends(get_session)):
-    return crear_producto(session, data)
-
-
-@router.patch("/{producto_id}", response_model=ProductoRead, status_code=status.HTTP_200_OK)
-@router.put("/{producto_id}", response_model=ProductoRead, status_code=status.HTTP_200_OK)
-def put_producto(
-    producto_id: int,
-    data: ProductoUpdate,
-    session: Session = Depends(get_session),
+@router.get(
+    "",
+    response_model=list[ProductoPublic]
+)
+def listar_productos(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, ge=1, le=50),
+    activo: bool | None = Query(default=None),
+    disponible: bool | None = Query(default=None),
+    categoria_id: int | None = Query(default=None),
+    search: str | None = Query(default=None),
+    session: Session = Depends(get_session)
 ):
-    return actualizar_producto(session, producto_id, data)
+    return service.listar_productos(
+        session=session,
+        skip=skip,
+        limit=limit,
+        activo=activo,
+        disponible=disponible,
+        categoria_id=categoria_id,
+        search=search
+    )
 
 
-@router.delete("/{producto_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_producto(producto_id: int, session: Session = Depends(get_session)):
-    eliminar_producto(session, producto_id)
+@router.get(
+    "/{producto_id}",
+    response_model=ProductoPublic
+)
+def obtener_producto(
+    producto_id: int = Path(ge=1),
+    session: Session = Depends(get_session)
+):
+    return service.obtener_producto(session, producto_id)
+
+
+@router.put(
+    "/{producto_id}",
+    response_model=ProductoPublic
+)
+def actualizar_producto(
+    datos: ProductoUpdate,
+    producto_id: int = Path(ge=1),
+    session: Session = Depends(get_session)
+):
+    return service.actualizar_producto(
+        session,
+        producto_id,
+        datos
+    )
+
+
+@router.delete(
+    "/{producto_id}",
+    status_code=204,
+    response_class=Response
+)
+def anular_producto(
+    producto_id: int = Path(ge=1),
+    session: Session = Depends(get_session)
+):
+    service.anular_producto(session, producto_id)
+    return Response(status_code=204)
 
 
 @router.post(
     "/{producto_id}/categorias",
-    response_model=ProductoRead,
-    status_code=status.HTTP_201_CREATED,
+    response_model=list[CategoriaProductoPublic],
+    status_code=201
 )
-def post_producto_categoria_body(
-    producto_id: int,
-    data: ProductoCategoriaAsignacion,
-    session: Session = Depends(get_session),
+def clasificar_producto(
+    datos: ProductoCategoriaCreate,
+    producto_id: int = Path(ge=1),
+    session: Session = Depends(get_session)
 ):
-    return asignar_categoria_a_producto(
-        session, producto_id, data.categoria_id, data.es_principal
+    return service.clasificar_producto(
+        session,
+        producto_id,
+        datos.categoria_id,
+        datos.es_principal
     )
 
 
-@router.post(
-    "/{producto_id}/categorias/{categoria_id}",
-    response_model=ProductoRead,
-    status_code=status.HTTP_201_CREATED,
+@router.get(
+    "/{producto_id}/categorias",
+    response_model=list[CategoriaProductoPublic]
 )
-def post_producto_categoria_path(
-    producto_id: int,
-    categoria_id: int,
-    session: Session = Depends(get_session),
+def obtener_categorias_producto(
+    producto_id: int = Path(ge=1),
+    session: Session = Depends(get_session)
 ):
-    return asignar_categoria_a_producto(session, producto_id, categoria_id, False)
-
-
-@router.delete(
-    "/{producto_id}/categorias/{categoria_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def delete_producto_categoria(
-    producto_id: int,
-    categoria_id: int,
-    session: Session = Depends(get_session),
-):
-    quitar_categoria_de_producto(session, producto_id, categoria_id)
+    return service.obtener_categorias_producto(
+        session,
+        producto_id
+    )
