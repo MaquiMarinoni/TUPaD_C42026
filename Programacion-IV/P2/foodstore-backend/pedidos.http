@@ -1,0 +1,27 @@
+# Iniciar sesión en test_api.http; REST Client conserva la cookie.
+@base = http://localhost:8000/api/v1
+@pedidoId = 1
+
+### Catálogos de solo lectura
+GET {{base}}/estados-pedido
+
+### Formas de pago
+GET {{base}}/formas-pago
+
+### Crear: el usuario_id se obtiene de la sesión
+POST {{base}}/pedidos
+Content-Type: application/json
+
+{"forma_pago_codigo":"EFECTIVO","detalles":[{"producto_id":1,"cantidad":2}]}
+
+### Listar
+GET {{base}}/pedidos
+
+### Cambiar estado: solo admin
+PUT {{base}}/pedidos/{{pedidoId}}
+Content-Type: application/json
+
+{"estado":"CONFIRMADO","motivo":"Prueba U9"}
+
+### Baja lógica: solo admin, conserva detalles e historial
+DELETE {{base}}/pedidos/{{pedidoId}}
