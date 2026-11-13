@@ -1,0 +1,32 @@
+# Respaldos y archivos temporales
+*.bak
+*.bak_*
+*.tmp
+*.orig
+*.rej
+respaldo_*/
+**/respaldo_*/
+
+# Scripts auxiliares utilizados durante el desarrollo
+Frontend/actualizar_catalogo.ps1
+Frontend/agregar_notificaciones.py
+Frontend/corregir_acentos.py
+Frontend/integrar_carrito_pedidos.ps1
+Frontend/refactor_hooks.ps1
+
+# Archivos temporales de diagnostico
+Frontend/categorias_actual.txt
+Frontend/productos_actual.txt
+Frontend/errores_frontend.txt
+
+# Entornos, dependencias y compilaciones
+**/.venv/
+**/node_modules/
+**/dist/
+**/__pycache__/
+**/.pytest_cache/
+
+# Configuracion privada
+**/.env
+**/.env.*
+!**/.env.example
