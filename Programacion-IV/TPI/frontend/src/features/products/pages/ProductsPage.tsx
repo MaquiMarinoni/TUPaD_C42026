@@ -162,9 +162,15 @@ export function ProductsPage() {
     </div>
     <AlertBanner message={pageAlert} onClose={() => setPageAlert(null)} />
     {isLoading && (
-      <p role="status" className="mb-3 text-sm text-slate-600">
-        Actualizando productos...
-      </p>
+      <div role="status" aria-label="Cargando cat?logo" className="mb-4 space-y-3 animate-pulse">
+        <span className="sr-only">Cargando cat?logo...</span>
+        <div className="h-9 w-64 rounded-lg bg-slate-200" />
+        <div className="grid gap-2 sm:grid-cols-3">
+          {[0, 1, 2].map((n) => (
+            <div key={n} className="h-14 rounded-lg bg-slate-200" />
+          ))}
+        </div>
+      </div>
     )}
     {isError && (
       <ErrorState

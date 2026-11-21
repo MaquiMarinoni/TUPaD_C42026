@@ -18,7 +18,13 @@ export function OrdersPage() {
   async function cancelOrder(id: number) {
     setMessage('');
     if (!window.confirm(`Cancelar el pedido #${id}?`)) return;
-    try { await cancel.mutateAsync(id); }
+    try {
+      if (isAdmin) {
+        await changeStatus.mutateAsync({ id, estado: 'CANCELADO' });
+      } else {
+        await cancel.mutateAsync(id);
+      }
+    }
     catch (err) { setMessage(err instanceof Error ? err.message : 'No se pudo cancelar el pedido.'); }
   }
   return <main className="mx-auto max-w-5xl space-y-5 px-4 py-8 text-slate-900">
@@ -33,7 +39,7 @@ export function OrdersPage() {
       <div className="flex flex-wrap gap-2">
         {isAdmin && pedido.estado === 'PENDIENTE' && <button className="rounded border px-3 py-2" disabled={changeStatus.isPending} onClick={() => void setStatus(pedido.id, 'EN_PREPARACION')}>Iniciar preparaci?n</button>}
         {isAdmin && pedido.estado === 'EN_PREPARACION' && <button className="rounded border px-3 py-2" disabled={changeStatus.isPending} onClick={() => void setStatus(pedido.id, 'ENTREGADO')}>Marcar entregado</button>}
-        {pedido.estado === 'PENDIENTE' && <button className="rounded border border-red-200 px-3 py-2 text-red-700" disabled={cancel.isPending} onClick={() => void cancelOrder(pedido.id)}>Cancelar</button>}
+        {(pedido.estado === 'PENDIENTE' || (isAdmin && pedido.estado === 'EN_PREPARACION')) && <button className="rounded border border-red-200 px-3 py-2 text-red-700" disabled={cancel.isPending || changeStatus.isPending} onClick={() => void cancelOrder(pedido.id)}>Cancelar</button>}
       </div>
     </section>)}
   </main>;

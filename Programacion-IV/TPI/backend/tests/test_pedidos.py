@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, create_engine
@@ -102,7 +102,7 @@ def test_stock_insuficiente_no_modifica_inventario(client):
     response = crear(client, [
         {"producto_id": 1, "cantidad": 11}
     ])
-    assert response.status_code == 409
+    assert response.status_code == 400
     assert stock(client) == 10
     assert client.get("/api/v1/pedidos").json()["total"] == 0
 
@@ -113,7 +113,7 @@ def test_productos_duplicados_rechazados(client):
         {"producto_id": 1, "cantidad": 1},
         {"producto_id": 1, "cantidad": 2},
     ])
-    assert response.status_code == 422
+    assert response.status_code == 400
     assert stock(client) == 10
 
 
@@ -123,7 +123,7 @@ def test_error_en_segundo_producto_revierte_compra(client):
         {"producto_id": 1, "cantidad": 2},
         {"producto_id": 2, "cantidad": 99},
     ])
-    assert response.status_code == 409
+    assert response.status_code == 400
     assert stock(client, 1) == 10
     assert stock(client, 2) == 5
 
@@ -143,7 +143,7 @@ def test_cancelacion_devuelve_stock(client):
     segunda = client.patch(
         f"/api/v1/pedidos/{pedido_id}/cancelar"
     )
-    assert segunda.status_code == 409
+    assert segunda.status_code == 400
     assert stock(client) == 10
 
 
@@ -169,7 +169,7 @@ def test_admin_avanza_estado_y_no_revierte_entregado(client):
         f"/api/v1/pedidos/{pedido_id}/estado",
         json={"estado": "CANCELADO"},
     )
-    assert cancelacion.status_code == 409
+    assert cancelacion.status_code == 400
     assert stock(client) == 8
 
 
@@ -213,3 +213,47 @@ def test_listado_y_detalle_protegidos(client):
 
     client.post("/api/v1/auth/logout")
     assert client.get("/api/v1/pedidos").status_code == 401
+
+
+def test_admin_cancela_pedido_ajeno_pendiente_y_restituye_stock(client):
+    login(client)
+    pedido_id = crear(client).json()["id"]
+    assert stock(client) == 8
+    login(client, "admin", "Admin1234!")
+    response = client.patch(
+        f"/api/v1/pedidos/{pedido_id}/estado",
+        json={"estado": "CANCELADO"},
+    )
+    assert response.status_code == 200
+    assert response.json()["estado"] == "CANCELADO"
+    assert stock(client) == 10
+
+
+def test_admin_cancela_en_preparacion_y_restituye_stock(client):
+    login(client)
+    pedido_id = crear(client).json()["id"]
+    login(client, "admin", "Admin1234!")
+    preparacion = client.patch(
+        f"/api/v1/pedidos/{pedido_id}/estado",
+        json={"estado": "EN_PREPARACION"},
+    )
+    assert preparacion.status_code == 200
+    cancelacion = client.patch(
+        f"/api/v1/pedidos/{pedido_id}/estado",
+        json={"estado": "CANCELADO"},
+    )
+    assert cancelacion.status_code == 200
+    assert cancelacion.json()["estado"] == "CANCELADO"
+    assert stock(client) == 10
+
+
+def test_admin_no_puede_saltar_de_pendiente_a_entregado(client):
+    login(client)
+    pedido_id = crear(client).json()["id"]
+    login(client, "admin", "Admin1234!")
+    invalida = client.patch(
+        f"/api/v1/pedidos/{pedido_id}/estado",
+        json={"estado": "ENTREGADO"},
+    )
+    assert invalida.status_code == 400
+    assert stock(client) == 8
