@@ -6,7 +6,7 @@ API REST con FastAPI, SQLModel/SQLAlchemy y PostgreSQL.
 
 Python 3.13 y PostgreSQL.
 
-## Instalaci?n (PowerShell, desde `Backend`)
+## Instalación (PowerShell, desde `Backend`)
 
 ```powershell
 python -m venv .venv
@@ -23,7 +23,7 @@ Crear la base de datos `foodstore_tpi` en PostgreSQL. Ajustar `DATABASE_URL` y `
 .\.venv\Scripts\python.exe -m app.db.seed
 ```
 
-El seed incluye un usuario administrador, tres categor?as y ocho productos. En una base nueva, el usuario inicial es `admin` y la contrase?a de demostraci?n `Admin1234!`. Cambiarla para cualquier entorno no local. La repetici?n del seed a?n no se verific? en una base aislada.
+El seed incluye un usuario administrador, tres categor?as y ocho productos. En una base nueva, el usuario inicial es `admin` y la contraseña de demostración `Admin1234!`. Cambiarla para cualquier entorno no local. La idempotencia del seed se verific? ejecut?ndolo dos veces en una base SQLite aislada, sin registros duplicados.
 
 ## Iniciar API
 
@@ -37,7 +37,7 @@ El seed incluye un usuario administrador, tres categor?as y ocho productos. En u
 
 ## M?dulos
 
-Autenticaci?n, usuarios, categor?as, productos, pedidos, stock y estados de pedidos. Las rutas se registran bajo `/api/v1`.
+Autenticación, usuarios, categorías, productos, pedidos, stock y estados de pedidos. Las rutas se registran bajo `/api/v1`.
 
 ## Pruebas
 
@@ -46,8 +46,8 @@ Autenticaci?n, usuarios, categor?as, productos, pedidos, stock y estados de pedi
 .\.venv\Scripts\python.exe -m pip check
 ```
 
-Resultado de la revisi?n: 33 pruebas aprobadas, con una advertencia no bloqueante de compatibilidad de Starlette/httpx.
+Resultado de la revisión: 33 pruebas aprobadas, con una advertencia no bloqueante de compatibilidad de Starlette/httpx.
 
 ## Organizaci?n
 
-El c?digo se distribuye en `app/api`, `app/core`, `app/db`, `app/models`, `app/repositories`, `app/schemas`, `app/services` y `app/uow`. El esquema se inicializa mediante `app.db.init_db` y la persistencia utiliza Unit of Work.
+El código se distribuye en `app/api`, `app/core`, `app/db`, `app/models`, `app/repositories`, `app/schemas`, `app/services` y `app/uow`. El esquema se inicializa mediante `app.db.init_db` y la persistencia utiliza Unit of Work.

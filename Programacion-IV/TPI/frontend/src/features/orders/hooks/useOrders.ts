@@ -17,7 +17,11 @@ export function useOrders() {
       return result;
     },
   });
-  const invalidate = () => client.invalidateQueries({ queryKey: ['pedidos'] });
+  const invalidate = () => {
+    void client.invalidateQueries({ queryKey: ['pedidos'] });
+    void client.invalidateQueries({ queryKey: ['productos'] });
+    void client.invalidateQueries({ queryKey: ['admin', 'pedidos', 'resumen'] });
+  };
   const create = useMutation({ mutationFn: async (payload: PedidoCrear) => (await axiosInstance.post<Pedido>('/pedidos', payload)).data, onSuccess: invalidate });
   const changeStatus = useMutation({ mutationFn: async ({ id, estado }: { id: number; estado: EstadoPedido }) => (await axiosInstance.patch<Pedido>(`/pedidos/${id}/estado`, { estado })).data, onSuccess: invalidate });
   const cancel = useMutation({ mutationFn: async (id: number) => (await axiosInstance.patch<Pedido>(`/pedidos/${id}/cancelar`)).data, onSuccess: invalidate });

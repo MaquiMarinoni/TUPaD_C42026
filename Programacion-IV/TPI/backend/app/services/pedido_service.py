@@ -1,4 +1,4 @@
-﻿from datetime import datetime, timezone
+from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import func
@@ -51,7 +51,7 @@ class PedidoService:
 
         if len(ids) != len(set(ids)):
             raise HTTPException(
-                422, "No se permiten productos repetidos en el pedido"
+                400, "No se permiten productos repetidos en el pedido"
             )
 
         if not data.direccion_entrega.strip() or len(
@@ -81,7 +81,7 @@ class PedidoService:
                     or not categoria.activo
                 ):
                     raise HTTPException(
-                        409, f"Producto {producto_id} no disponible"
+                        400, f"Producto {producto_id} no disponible"
                     )
 
                 productos[producto_id] = producto
@@ -94,7 +94,7 @@ class PedidoService:
 
                 if producto.stock < item.cantidad:
                     raise HTTPException(
-                        409, f"Stock insuficiente: {producto.nombre}"
+                        400, f"Stock insuficiente: {producto.nombre}"
                     )
 
                 precio_centavos = round(producto.precio_base * 100)
@@ -184,7 +184,7 @@ class PedidoService:
 
             if nuevo_estado not in TRANSICIONES[pedido.estado]:
                 raise HTTPException(
-                    409, "Transicion de estado no permitida"
+                    400, "Transicion de estado no permitida"
                 )
 
             if nuevo_estado == "CANCELADO":
@@ -212,7 +212,7 @@ class PedidoService:
 
             if pedido.estado != "PENDIENTE":
                 raise HTTPException(
-                    409, "Solo se pueden cancelar pedidos pendientes"
+                    400, "Solo se pueden cancelar pedidos pendientes"
                 )
 
             self._devolver_stock(uow, pedido_id)

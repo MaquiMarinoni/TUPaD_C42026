@@ -1,4 +1,4 @@
-﻿import os
+import os
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
@@ -162,7 +162,7 @@ def test_dos_compras_simultaneas_no_generan_stock_negativo(
 
     assert len(exitos) == 1, resultados
     assert len(errores) == 1, resultados
-    assert errores[0][1] == 409, resultados
+    assert errores[0][1] == 400, resultados
 
     with UnitOfWork() as uow:
         producto = uow.productos.get_by_id(producto_id)

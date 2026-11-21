@@ -1,12 +1,12 @@
-# Food Store - Trabajo Pr?ctico Integrador
+# Food Store - Trabajo Practico Integrador
 
-**Materia:** Programaci?n IV  
-**Carrera:** Tecnicatura Universitaria en Programaci?n a Distancia - UTN  
+**Materia:** Programación IV
+**Carrera:** Tecnicatura Universitaria en Programación a Distancia - UTN
 **Alumna:** Macarena Marinoni
 
 ## Descripci?n
 
-Food Store es una aplicaci?n web para consultar un cat?logo, gestionar un carrito y realizar pedidos. Los usuarios autenticados pueden consultar su historial; el personal administrador puede gestionar productos, categor?as, usuarios y estados de pedidos.
+Food Store es una aplicación web para consultar un catálogo, gestionar un carrito y realizar pedidos. Los usuarios autenticados pueden consultar su historial; el personal administrador puede gestionar productos, categorías, usuarios y estados de pedidos.
 
 ## Tecnolog?as
 
@@ -15,9 +15,9 @@ Food Store es una aplicaci?n web para consultar un cat?logo, gestionar un carrit
 
 ## Estructura
 
-- `Backend/`: API REST, modelos, repositorios, servicios, pruebas y configuraci?n.
-- `Frontend/`: aplicaci?n React.
-- `Backend/README.md` y `Frontend/README.md`: instrucciones espec?ficas.
+- `Backend/`: API REST, modelos, repositorios, servicios, pruebas y configuración.
+- `Frontend/`: aplicación React.
+- `Backend/README.md` y `Frontend/README.md`: instrucciones específicas.
 
 ## Requisitos
 
@@ -35,7 +35,7 @@ Copy-Item .env.example .env
 ```
 
 3. Editar `Backend/.env` con los datos locales de PostgreSQL y una clave secreta propia. Nunca publicar este archivo.
-4. Inicializar tablas y datos de demostraci?n:
+4. Inicializar tablas y datos de demostración:
 
 ```powershell
 .\.venv\Scripts\python.exe -m app.db.init_db
@@ -59,16 +59,16 @@ pnpm dev
 
 ## Funcionalidades
 
-- Cat?logo p?blico, b?squeda, filtros y paginaci?n.
+- Catálogo p?blico, busqueda, filtros y paginación.
 - Carrito de compras con persistencia local.
-- Registro, inicio y cierre de sesi?n.
+- Registro, inicio y cierre de sesión.
 - Checkout protegido y consulta de pedidos.
-- Gesti?n administrativa de usuarios, categor?as, productos, stock, disponibilidad y pedidos.
+- Gestión administrativa de usuarios, categorías, productos, stock, disponibilidad y pedidos.
 - Panel de resumen, notificaciones y modo claro/oscuro.
 
-## Datos de demostraci?n
+## Datos de demostración
 
-El seed define un administrador, tres categor?as (Bebidas, Almacen y Panaderia) y ocho productos. Para una base local nueva, las credenciales iniciales son usuario `admin` y contrase?a `Admin1234!`. Cambiarlas antes de usar el sistema fuera del entorno de demostraci?n.
+El seed define un administrador, tres categorías (Bebidas, Almacen y Panaderia) y ocho productos. Para una base local nueva, las credenciales iniciales son usuario `admin` y contraseña `Admin1234!`. Cambiarlas antes de usar el sistema fuera del entorno de demostración.
 
 ## Verificaciones
 
@@ -85,10 +85,16 @@ Frontend:
 pnpm build
 ```
 
-En la revisi?n del trabajo se obtuvieron 33 pruebas de backend aprobadas y una compilaci?n frontend correcta. La idempotencia del seed en ejecuci?n todav?a requiere una prueba aislada.
+En la revisi?n se obtuvieron 33 pruebas de backend aprobadas y una compilaci?n frontend correcta. Adem?s, el seed se ejecut? dos veces en una base SQLite aislada sin duplicar registros (1 administrador, 3 categor?as y 8 productos).
 
 ## Repositorio
 
-Repositorio de la cursada: https://github.com/MaquiMarinoni/TUPaD_C42026
+Repositorio: https://github.com/MaquiMarinoni/TUPaD_C42026/tree/tpi-food-store/Programacion-IV/TPI
 
-Proyecto: `Programacion-IV/TPI`, rama de trabajo `tpi-food-store`. La publicaci?n y el enlace definitivo deben verificarse antes de entregar.
+Proyecto publicado en la rama `tpi-food-store`: https://github.com/MaquiMarinoni/TUPaD_C42026/tree/tpi-food-store/Programacion-IV/TPI
+
+## Video de demostración
+
+El video presenta el funcionamiento del TPI Food Store, incluyendo el registro de usuarios, la compra como cliente, la administración de pedidos y la cancelación con restitución del stock.
+
+Ver video de demostración: https://www.youtube.com/watch?v=8QbaWf5HZ78

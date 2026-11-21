@@ -1,4 +1,4 @@
-﻿from fastapi import HTTPException
+from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 
 from app.models.categoria import Categoria
@@ -56,7 +56,7 @@ class CategoriaService:
             with UnitOfWork() as uow:
                 categoria = uow.categorias.get_by_id(categoria_id)
 
-                if categoria is None:
+                if categoria is None or not categoria.activo:
                     raise HTTPException(404, "Categoria inexistente")
 
                 cambios = data.model_dump(exclude_unset=True)

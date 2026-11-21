@@ -1,4 +1,4 @@
-﻿import pytest
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, create_engine
@@ -109,3 +109,20 @@ def test_actualizacion_y_borrado_logico(client):
         categoria = uow.categorias.get_by_id(categoria_id)
         assert categoria is not None
         assert categoria.activo is False
+
+
+def test_categoria_inactiva_rechaza_edicion_y_segundo_borrado(client):
+    iniciar_admin(client)
+    creada = client.post(
+        "/api/v1/categorias",
+        json={"nombre": "Temporal"},
+    )
+    assert creada.status_code == 201
+    categoria_id = creada.json()["id"]
+    assert client.delete(f"/api/v1/categorias/{categoria_id}").status_code == 204
+    edicion = client.put(
+        f"/api/v1/categorias/{categoria_id}",
+        json={"nombre": "Reactivada"},
+    )
+    assert edicion.status_code == 404
+    assert client.delete(f"/api/v1/categorias/{categoria_id}").status_code == 404
